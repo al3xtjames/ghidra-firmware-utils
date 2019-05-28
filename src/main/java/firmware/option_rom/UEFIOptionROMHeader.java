@@ -13,9 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.program.model.data.ArrayDataType;
+import ghidra.program.model.data.DataType;
+import ghidra.program.model.data.Structure;
+import ghidra.program.model.data.StructureDataType;
+import ghidra.util.exception.DuplicateNameException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -61,6 +67,21 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 		} else {
 			return new ByteArrayInputStream(efiImage);
 		}
+	}
+
+	@Override
+	public DataType toDataType() throws DuplicateNameException, IOException {
+		Structure structure = new StructureDataType("uefi_option_rom_header", 0);
+		structure.add(WORD, "signature", null);
+		structure.add(WORD, "image_size", null);
+		structure.add(DWORD, "efi_signature", null);
+		structure.add(WORD, "efi_subsystem", null);
+		structure.add(WORD, "efi_machine_type", null);
+		structure.add(WORD, "efi_compression_type", null);
+		structure.add(new ArrayDataType(BYTE, 0x8, BYTE.getLength()), "reserved", null);
+		structure.add(WORD, "efi_image_offset", null);
+		structure.add(WORD, "pcir_offset", null);
+		return structure;
 	}
 
 	@Override

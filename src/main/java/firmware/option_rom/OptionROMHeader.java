@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.StructConverter;
+import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
@@ -63,8 +65,10 @@ public class OptionROMHeader implements StructConverter {
 
 	@Override
 	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("option_rom", 0);
-		structure.add(WORD, 0);
+		Structure structure = new StructureDataType("option_rom_header", 0);
+		structure.add(WORD, "signature", null);
+		structure.add(new ArrayDataType(BYTE, 0x16, BYTE.getLength()), "reserved", null);
+		structure.add(WORD, "pcir_offset", null);
 		return structure;
 	}
 

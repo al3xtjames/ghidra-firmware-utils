@@ -13,9 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.program.model.data.ArrayDataType;
+import ghidra.program.model.data.DataType;
+import ghidra.program.model.data.Structure;
+import ghidra.program.model.data.StructureDataType;
+import ghidra.util.exception.DuplicateNameException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -59,6 +65,17 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 	@Override
 	public ByteArrayInputStream getImageStream() {
 		return new ByteArrayInputStream(x86Image);
+	}
+
+	@Override
+	public DataType toDataType() throws DuplicateNameException, IOException {
+		Structure structure = new StructureDataType("x86_option_rom_header", 0);
+		structure.add(WORD, "signature", null);
+		structure.add(BYTE, "image_size", null);
+		structure.add(new ArrayDataType(BYTE, 0x3, BYTE.getLength()), "entry_point_instruction", null);
+		structure.add(new ArrayDataType(BYTE, 0x12, BYTE.getLength()), "reserved", null);
+		structure.add(WORD, "pcir_offset", null);
+		return structure;
 	}
 
 	@Override

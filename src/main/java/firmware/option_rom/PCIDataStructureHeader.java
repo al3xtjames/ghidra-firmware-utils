@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.StructConverter;
+import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
@@ -84,8 +86,31 @@ public class PCIDataStructureHeader implements StructConverter {
 
 	@Override
 	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("pcir", 0);
-		structure.add(DWORD, 0);
+		Structure structure = new StructureDataType("pci_data_structure_header", 0);
+		structure.add(new ArrayDataType(ASCII, 4, ASCII.getLength()), "signature", null);
+		structure.add(BYTE, "vendor_id", null);
+		structure.add(BYTE, "device_id", null);
+		if (headerRevision == 3) {
+			structure.add(WORD, "device_list_offset", null);
+		} else {
+			structure.add(WORD, "reserved_1", null);
+		}
+
+		structure.add(WORD, "pcir_header_len", null);
+		structure.add(WORD, "pcir_header_rev", null);
+		structure.add(new ArrayDataType(BYTE, 3, BYTE.getLength()), "class_code", null);
+		structure.add(WORD, "image_len", null);
+		structure.add(WORD, "vendor_rom_rev", null);
+		structure.add(BYTE, "code_type", null);
+		structure.add(BYTE, "last_image_indicator", null);
+		if (headerRevision == 3) {
+			structure.add(WORD, "max_runtime_image_len", null);
+			structure.add(WORD, "config_utility_code_offset", null);
+			structure.add(WORD, "dmtf_clp_entry_point_offset", null);
+		} else {
+			structure.add(WORD, "reserved_2", null);
+		}
+
 		return structure;
 	}
 
