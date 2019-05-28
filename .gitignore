@@ -1,0 +1,12 @@
+.gradle/
+.idea/
+.settings/
+bin/
+build/
+dist/
+gradle/
+.antProperties.xml
+.project
+.pydevproject
+.classpath
+
