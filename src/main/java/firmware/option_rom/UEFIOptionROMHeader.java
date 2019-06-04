@@ -16,6 +16,7 @@
 
 package firmware.option_rom;
 
+import firmware.common.EFIDecompressor;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
@@ -62,8 +63,7 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 	@Override
 	public ByteArrayInputStream getImageStream() {
 		if (efiCompressionType == 1) {
-			// TODO: Implement EFI Decompression
-			return new ByteArrayInputStream(efiImage);
+			return new ByteArrayInputStream(EFIDecompressor.decompress(efiImage));
 		} else {
 			return new ByteArrayInputStream(efiImage);
 		}

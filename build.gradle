@@ -1,9 +1,9 @@
 // Builds a Ghidra Extension for a given Ghidra installation.
 //
-// An absolute path to the Ghidra installation directory must be supplied either by setting the 
+// An absolute path to the Ghidra installation directory must be supplied either by setting the
 // GHIDRA_INSTALL_DIR environment variable or Gradle project property:
 //
-//     > export GHIDRA_INSTALL_DIR=<Absolute path to Ghidra> 
+//     > export GHIDRA_INSTALL_DIR=<Absolute path to Ghidra>
 //     > gradle
 //
 //         or
@@ -13,6 +13,54 @@
 // Gradle should be invoked from the directory of the project to build.  Please see the
 // application.gradle.version property in <GHIDRA_INSTALL_DIR>/Ghidra/application.properties
 // for the correction version of Gradle to use for the Ghidra installation you specify.
+
+apply plugin: 'c'
+model {
+	components {
+		efidecompress(NativeLibrarySpec) {
+			sources {
+				c {
+					source {
+						srcDir 'src/efidecompress/c'
+						include 'efidecompress.c'
+					}
+				}
+			}
+
+			binaries.all {
+				if (targetPlatform.operatingSystem.macOsX) {
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/darwin"
+					cCompiler.args '-mmacosx-version-min=10.4'
+					linker.args '-mmacosx-version-min=10.4'
+				} else if (targetPlatform.operatingSystem.linux) {
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/linux"
+					cCompiler.args '-D_FILE_OFFSET_BITS=64'
+				} else if (targetPlatform.operatingSystem.windows) {
+					// TODO: test Windows JNI library support
+					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
+					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}/include/win32"
+					linker.args "Shlwapi.lib", "Advapi32.lib"
+				}
+			}
+		}
+	}
+}
+
+import org.apache.tools.ant.taskdefs.condition.Os;
+
+task copyLibrary(type: Copy) {
+	if (Os.isFamily(Os.FAMILY_MAC)) {
+		from file("$buildDir/libs/efidecompress/shared/libefidecompress.dylib") into "$projectDir/os/osx64"
+	} else if (Os.isFamily(Os.FAMILY_UNIX)) {
+		from file("$buildDir/libs/efidecompress/shared/libefidecompress.so") into "$projectDir/os/linux64"
+	} else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+		from file("$buildDir/libs/efidecompress/shared/libefidecompress/win32.dll") into file("$projectDir/os/win64/efidecompress.dll")
+	}
+}
+
+copyLibrary.dependsOn 'efidecompressSharedLibrary'
 
 //----------------------START "DO NOT MODIFY" SECTION------------------------------
 def ghidraInstallDir
@@ -31,3 +79,11 @@ else {
 	throw new GradleException("GHIDRA_INSTALL_DIR is not defined!")
 }
 //----------------------END "DO NOT MODIFY" SECTION-------------------------------
+
+buildExtension.dependsOn 'copyLibrary'
+
+clean {
+	delete "$projectDir/os/linux64/libefidecompress.libefidecompress.so"
+	delete "$projectDir/os/osx64/libefidecompress.dylib"
+	delete "$projectDir/os/win64/libefidecompress.dll"
+}

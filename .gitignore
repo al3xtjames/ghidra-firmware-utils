@@ -9,4 +9,6 @@ gradle/
 .project
 .pydevproject
 .classpath
-
+*.dll
+*.dylib
+*.so
