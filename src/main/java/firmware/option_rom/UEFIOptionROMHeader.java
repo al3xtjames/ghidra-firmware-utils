@@ -28,6 +28,31 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Formatter;
 
+/**
+ * Parser for UEFI option ROM images. There are additional fields in the ROM header:
+ *
+ *   ROM Header
+ *   +---------+--------------------------------------------------+
+ *   | Type    | Size | Description                               |
+ *   +---------+--------------------------------------------------+
+ *   | u16     |    2 | Signature (0xAA55, little endian)         |
+ *   | u16     |    2 | Image Size (in units of 512 bytes)        |
+ *   | u32     |    4 | EFI Signature (0x00000EF1, little endian) |
+ *   | u16     |    2 | EFI Subsystem                             |
+ *   | u16     |    2 | EFI Machine Type                          |
+ *   | u16     |    2 | EFI Compression Type                      |
+ *   | u8[8]   |    8 | Reserved                                  |
+ *   | u16     |    2 | EFI Image Offset                          |
+ *   | u16     |    2 | PCI Data Structure Offset                 |
+ *   +---------+--------------------------------------------------+
+ *
+ * See OptionROMConstants for possible EFI Subsytem and Machine Type values.
+ *
+ * The EFI Image Offset field in the ROM header is used to locate the EFI PE32+ executable. If the
+ * EFI Compression Type field is set to 1, the PE32+ executable is compressed with the EFI
+ * Compression Algorithm, which is a combination of the LZ77 algorithm and Huffman coding. The
+ * EFIDecompressor class is used to handle compressed images.
+ */
 public class UEFIOptionROMHeader extends OptionROMHeader {
 	// Original header fields
 	private short imageSize;
@@ -41,6 +66,11 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 	// May be compressed with the EFI Compression Algorithm
 	private byte[] efiImage;
 
+	/**
+	 * Constructs a UEFIOptionROMHeader from a specified BinaryReader.
+	 *
+	 * @param reader the specified BinaryReader
+	 */
 	public UEFIOptionROMHeader(BinaryReader reader) throws IOException {
 		super(reader);
 		reader.setPointerIndex(0x2);
@@ -60,6 +90,12 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 		efiImage = reader.readNextByteArray(efiExecutableSize);
 	}
 
+	/**
+	 * Returns a ByteArrayInputStream for the contents of the EFI PE32+ executable. Compressed
+	 * executables will be transparently decompressed before returning.
+	 *
+	 * @return a ByteArrayInputStream for the contents of the EFI PE32+ executable
+	 */
 	@Override
 	public ByteArrayInputStream getImageStream() {
 		if (efiCompressionType == 1) {

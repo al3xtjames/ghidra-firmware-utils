@@ -16,12 +16,12 @@
 
 package firmware.common;
 
-import ghidra.framework.Application;
-import ghidra.framework.Platform;
-import ghidra.framework.main.AppInfo;
 import ghidra.util.Msg;
 import util.JNILibraryLoader;
 
+/**
+ * Handles the decompression of images compressed with the EFI Compression Algorithm.
+ */
 public abstract class EFIDecompressor {
 	private static boolean loadFailed = false;
 	private static Throwable throwable = null;
@@ -35,8 +35,19 @@ public abstract class EFIDecompressor {
 		}
 	}
 
+	/**
+	 * Decompresses the specified compressed image. Implemented by the efidecompress native
+	 * library.
+	 *
+	 * @param compressedImage the compressed image
+	 */
 	private static native byte[] nativeDecompress(byte[] compressedImage);
 
+	/**
+	 * Decompressed the specified compressed image.
+	 *
+	 * @param compressedImage the compressed image
+	 */
 	public static byte[] decompress(byte[] compressedImage) {
 		if (loadFailed) {
 			Msg.showError(EFIDecompressor.class, null, "EFI Decompressor",

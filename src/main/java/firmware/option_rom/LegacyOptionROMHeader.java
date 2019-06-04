@@ -27,6 +27,23 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Formatter;
 
+/**
+ * Parser for legacy x86/PC compatible option ROM images. There are additional fields in the ROM
+ * header:
+ *
+ *   ROM Header
+ *   +---------+-------------------------------------------+
+ *   | Type    | Size | Description                        |
+ *   +---------+-------------------------------------------+
+ *   | u16     |    2 | Signature (0xAA55, little endian)  |
+ *   | u8      |    1 | Image Size (in units of 512 bytes) |
+ *   | u8[3]   |    3 | Entry Point                        |
+ *   | u8[18]  |   18 | Reserved                           |
+ *   | u16     |    2 | PCI Data Structure Offset          |
+ *   +---------+-------------------------------------------+
+ *
+ * The Entry Point field in the ROM header usually contains a JMP (rel8 or rel16) instruction.
+ */
 public class LegacyOptionROMHeader extends OptionROMHeader {
 	// Original header fields
 	private byte imageSize;
@@ -35,6 +52,11 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 	private short entryPointOffset;
 	private byte[] x86Image;
 
+	/**
+	 * Constructs a LegacyOptionROMHeader from a specified BinaryReader.
+	 *
+	 * @param reader the specified BinaryReader
+	 */
 	public LegacyOptionROMHeader(BinaryReader reader) throws IOException {
 		super(reader);
 		reader.setPointerIndex(0x2);
@@ -46,13 +68,15 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		entryPointOffset = 0x3;
 		int executableSize;
 		if (entryPointInstruction[0] == (byte) 0xEB) {
+			// JMP rel8 (relative to next instruction)
 			entryPointOffset += entryPointInstruction[1];
-			entryPointOffset += 0x2;
+			entryPointOffset += 0x2; // Size of the instruction (offset to next instruction)
 			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - entryPointOffset;
 		} else if (entryPointInstruction[0] == (byte) 0xE9) {
+			// JMP rel16 (relative to next instruction)
 			entryPointOffset +=
 					(short) (entryPointInstruction[2] << 8 | entryPointInstruction[1] & 0xFF);
-			entryPointOffset += 0x3;
+			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
 			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - entryPointOffset;
 		} else {
 			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - 0x3;
@@ -62,6 +86,13 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		x86Image = reader.readNextByteArray(executableSize);
 	}
 
+	/**
+	 * Returns a ByteArrayInputStream for the contents of the image, starting at the decoded entry
+	 * point from the entry point field in the ROM header. This should be treated as a raw 16-bit
+	 * x86 binary.
+	 *
+	 * @return a ByteArrayInputStream for the contents of the image
+	 */
 	@Override
 	public ByteArrayInputStream getImageStream() {
 		return new ByteArrayInputStream(x86Image);

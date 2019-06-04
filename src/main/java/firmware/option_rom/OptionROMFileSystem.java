@@ -26,7 +26,10 @@ import ghidra.util.task.TaskMonitor;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 @FileSystemInfo(type = "pcir", description = "PCI Option ROM", factory = GFileSystemBaseFactory.class)
 public class OptionROMFileSystem extends GFileSystemBase {
@@ -46,6 +49,7 @@ public class OptionROMFileSystem extends GFileSystemBase {
 	public void open(TaskMonitor monitor) throws IOException {
 		int imageOffset = 0;
 		while (true) {
+			// Read each subsequent image and add it to the map (until the last image is read).
 			byte[] bytes = provider.readBytes(imageOffset, provider.length());
 			BinaryReader reader = new BinaryReader(new ByteArrayProvider(bytes), true);
 			OptionROMHeader header = OptionROMHeaderFactory.parseOptionROM(reader);

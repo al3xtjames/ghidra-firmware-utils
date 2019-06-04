@@ -16,8 +16,11 @@
 
 package firmware.option_rom;
 
+/**
+ * Various PCI option ROM/PCI data structure constants.
+ */
 public final class OptionROMConstants {
-	// PCI option ROM signature
+	// PCI option ROM signature (little endian)
 	public static final short ROM_SIGNATURE = (short) 0xAA55;
 	public static final byte[] ROM_SIGNATURE_BYTES = {0x55, (byte) 0xAA};
 
@@ -51,10 +54,10 @@ public final class OptionROMConstants {
 		}
 	}
 
-	// (U)EFI option ROM signature
-	public static final int EFI_SIGNATURE = 0x0EF1;
+	// (U)EFI option ROM signature (little endian)
+	public static final int EFI_SIGNATURE = 0x00000EF1;
 
-	// (U)EFI image subsystems
+	// (U)EFI image subsystems (little endian)
 	public static final class EFIImageSubsystem {
 		public static final short APPLICATION = 10;
 		public static final short BOOT_SERVICE_DRIVER = 11;

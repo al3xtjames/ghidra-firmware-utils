@@ -20,7 +20,18 @@ import ghidra.app.util.bin.BinaryReader;
 
 import java.io.IOException;
 
-public class OptionROMHeaderFactory {
+/**
+ * Factory for constructing the correct option ROM type based off the code type field in the PCI
+ * data structure header.
+ */
+public abstract class OptionROMHeaderFactory {
+	/**
+	 * Constructs an OptionROMHeader from a specified BinaryReader by checking the code type field
+	 * in the PCI data structure header.
+	 *
+	 * @param reader the specified BinaryReader
+	 * @return       the parsed OptionROMHeader
+	 */
 	public static OptionROMHeader parseOptionROM(BinaryReader reader) throws IOException {
 		short signature = reader.readNextShort();
 		if (signature != OptionROMConstants.ROM_SIGNATURE) {
@@ -35,6 +46,7 @@ public class OptionROMHeaderFactory {
 		reader.setPointerIndex(pcirOffset + 0x14);
 		byte codeType = reader.readNextByte();
 
+		// Construct the correct OptionROMHeader based off the code type.
 		reader.setPointerIndex(0);
 		switch (codeType) {
 			case OptionROMConstants.CodeType.PC_AT_COMPATIBLE:

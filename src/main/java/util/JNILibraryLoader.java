@@ -22,7 +22,17 @@ import ghidra.framework.Platform;
 import java.io.File;
 import java.io.FileNotFoundException;
 
+/**
+ * Utility class for loading native libraries.
+ */
 public abstract class JNILibraryLoader {
+	/**
+	 * Loads a specified native library from the os directory.
+	 *
+	 * @param  name                  the name of the native library
+	 * @throws FileNotFoundException if the native library was not found
+	 * @throws UnsatisfiedLinkError  if the native library could not be statically linked
+	 */
 	public static void loadLibrary(String name) throws FileNotFoundException, UnsatisfiedLinkError {
 		File libraryPath = Application.getOSFile(System.mapLibraryName(name));
 		System.load(libraryPath.getAbsolutePath());

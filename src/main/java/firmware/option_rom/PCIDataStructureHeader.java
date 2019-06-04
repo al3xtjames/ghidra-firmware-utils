@@ -27,6 +27,10 @@ import ghidra.util.exception.DuplicateNameException;
 import java.io.IOException;
 import java.util.Formatter;
 
+/**
+ * Parser for the PCI data structure stored within PCI option ROM images. See OptionROMHeader for a
+ * description of the fields within the data structure.
+ */
 public class PCIDataStructureHeader implements StructConverter {
 	// Original header fields
 	private String signature;
@@ -44,6 +48,11 @@ public class PCIDataStructureHeader implements StructConverter {
 	private short configUtilityCodeOffset;
 	private short dmtfClpOffset;
 
+	/**
+	 * Constructs a PCIDataStructureHeader from a specified BinaryReader.
+	 *
+	 * @param reader the specified BinaryReader
+	 */
 	public PCIDataStructureHeader(BinaryReader reader) throws IOException {
 		signature = reader.readNextAsciiString(OptionROMConstants.PCIR_SIGNATURE.length());
 		if (!signature.equals(OptionROMConstants.PCIR_SIGNATURE)) {
@@ -71,14 +80,29 @@ public class PCIDataStructureHeader implements StructConverter {
 		}
 	}
 
+	/**
+	 * Returns the size of the current image.
+	 *
+	 * @return the size of the current image
+	 */
 	public int getImageLength() {
 		return imageLength * OptionROMConstants.ROM_SIZE_UNIT;
 	}
 
+	/**
+	 * Returns the current image's code type.
+	 *
+	 * @return the current image's code type
+	 */
 	public byte getCodeType() {
 		return codeType;
 	}
 
+	/**
+	 * Checks if this is the last image in the expansion ROM.
+	 *
+	 * @return if this is the last image in the expansion ROM
+	 */
 	public boolean isLastImage() {
 		// Bit 7 in the last image indicator field tells if this is the last image in the ROM.
 		return (lastImageIndicator & 0x80) != 0;
