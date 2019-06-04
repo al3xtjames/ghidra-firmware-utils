@@ -20,10 +20,22 @@ Abstract:
 
 --*/
 
-#include <stdlib.h>
-#include <stdio.h>
+// Build the utility by default
+#if !defined(CONFIG_FUZZ) && !defined(CONFIG_JNI)
+#define CONFIG_UTIL 1
+#endif // !CONFIG_FUZZ && !CONFIG_UTIL
 
+#ifdef CONFIG_UTIL
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#endif // CONFIG_UTIL
+
+#ifdef CONFIG_JNI
 #include <jni.h>
+#endif // CONFIG_JNI
+
+#include <stdlib.h>
 
 #include "efidecompress.h"
 
@@ -56,28 +68,27 @@ Abstract:
 
 
 typedef struct {
-  uint8_t   *mSrcBase;  // Starting address of compressed data
-  uint8_t   *mDstBase;  // Starting address of decompressed data
-  size_t    mOutBuf;
-  size_t    mInBuf;
+  const uint8_t  *mSrcBase;  // Starting address of compressed data
+  uint8_t        *mDstBase;  // Starting address of decompressed data
+  size_t         mOutBuf;
+  size_t         mInBuf;
 
-  uint16_t  mBitCount;
-  size_t    mBitBuf;
-  size_t    mSubBitBuf;
-  uint16_t  mBlockSize;
-  size_t    mCompSize;
-  size_t    mOrigSize;
+  uint16_t       mBitCount;
+  size_t         mBitBuf;
+  size_t         mSubBitBuf;
+  uint16_t       mBlockSize;
+  size_t         mCompSize;
+  size_t         mOrigSize;
 
-  uint16_t  mBadTableFlag;
-  uint16_t  mBadAlgorithm;
+  uint16_t       mBadTableFlag;
+  uint16_t       mBadAlgorithm;
 
-  uint16_t  mLeft[2 * NC - 1];
-  uint16_t  mRight[2 * NC - 1];
-  uint8_t   mCLen[NC];
-  uint8_t   mPTLen[NPT];
-  uint16_t  mCTable[MCTABLESIZE];
-  uint16_t  mPTTable[MPTTABLESIZE];
-
+  uint16_t       mLeft[2 * NC - 1];
+  uint16_t       mRight[2 * NC - 1];
+  uint8_t        mCLen[NC];
+  uint8_t        mPTLen[NPT];
+  uint16_t       mCTable[MCTABLESIZE];
+  uint16_t       mPTTable[MPTTABLESIZE];
 } SCRATCH_DATA;
 
 static uint16_t mPbit = EFIPBIT;
@@ -103,10 +114,14 @@ Returns: (void)
 
 --*/
 {
+  if (NumOfBits > BITBUFSIZ) {
+    NumOfBits = BITBUFSIZ;
+    Sd->mBadTableFlag = 1;
+  }
+
   Sd->mBitBuf = (Sd->mBitBuf << NumOfBits) & 0xFFFFFFFFLL;
 
   while (NumOfBits > Sd->mBitCount) {
-
     Sd->mBitBuf |= Sd->mSubBitBuf << (NumOfBits = (uint16_t) (NumOfBits - Sd->mBitCount));
 
     if (Sd->mCompSize > 0) {
@@ -117,14 +132,12 @@ Returns: (void)
       Sd->mSubBitBuf  = 0;
       Sd->mSubBitBuf  = Sd->mSrcBase[Sd->mInBuf++];
       Sd->mBitCount   = 8;
-
     } else {
       //
       // No more bits from the source, just pad zero bit.
       //
       Sd->mSubBitBuf  = 0;
       Sd->mBitCount   = 8;
-
     }
   }
 
@@ -158,6 +171,11 @@ Returns:
 --*/
 {
   size_t  OutBits;
+
+  if (NumOfBits > BITBUFSIZ) {
+    NumOfBits = BITBUFSIZ;
+    Sd->mBadTableFlag = 1;
+  }
 
   OutBits = (Sd->mBitBuf >> (BITBUFSIZ - NumOfBits));
 
@@ -218,6 +236,11 @@ Returns:
   }
 
   for (Index = 0; Index < NumOfChar; Index++) {
+    if (BitLen[Index] >= 17) {
+      Sd->mBadTableFlag = 1;
+      return (uint16_t) BAD_TABLE;
+    }
+
     Count[BitLen[Index]]++;
   }
 
@@ -264,7 +287,7 @@ Returns:
 
     if (Len <= TableBits) {
       for (Index = Start[Len]; Index < NextCode; Index++) {
-        if(Index >= TableSize) {
+        if (Index >= TableSize) {
           Sd->mBadAlgorithm = 1;
           return (uint16_t) BAD_TABLE;
         }
@@ -397,7 +420,7 @@ Returns:
   if (Number == 0) {
     CharC = (uint16_t) GetBits (Sd, nbit);
 
-    for (Index = 0; Index < 256; Index++) {
+    for (Index = 0; Index < MPTTABLESIZE; Index++) {
       Sd->mPTTable[Index] = CharC;
     }
 
@@ -429,6 +452,11 @@ Returns:
       CharC = (uint16_t) GetBits (Sd, 2);
       CharC--;
       while ((int16_t) (CharC) >= 0) {
+        if (Index >= NPT) {
+          Sd->mBadTableFlag = 1;
+          return (uint16_t) BAD_TABLE;
+        }
+
         Sd->mPTLen[Index++] = 0;
         CharC--;
       }
@@ -514,10 +542,20 @@ Returns: (void)
 
       CharC--;
       while ((int16_t) (CharC) >= 0) {
+        if (Index >= NC) {
+          Sd->mBadTableFlag = 1;
+          return;
+        }
+
         Sd->mCLen[Index++] = 0;
         CharC--;
       }
     } else {
+      if (Index >= NC) {
+        Sd->mBadTableFlag = 1;
+        return;
+      }
+
       Sd->mCLen[Index++] = (uint8_t) (CharC - 2);
     }
   }
@@ -527,8 +565,6 @@ Returns: (void)
   }
 
   MakeTable (Sd, NC, Sd->mCLen, 12, Sd->mCTable);
-
-  return ;
 }
 
 static
@@ -553,8 +589,7 @@ Returns:
 --*/
 {
   uint16_t  Index2;
-  size_t  Mask;
-  static size_t block_num;
+  size_t    Mask;
 
   if (Sd->mBlockSize == 0) {
     //
@@ -636,7 +671,7 @@ Returns: (void)
       //
       Sd->mDstBase[Sd->mOutBuf++] = (uint8_t) CharC;
       if (Sd->mOutBuf >= Sd->mOrigSize) {
-        return ;
+        return;
       }
 
     } else {
@@ -664,15 +699,14 @@ Returns: (void)
       }
     }
   }
-  return;
 }
 
 RETURN_STATUS
 GetInfo (
-  void    *Source,
-  size_t  SrcSize,
-  size_t  *DstSize,
-  size_t  *ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  size_t      *DstSize,
+  size_t      *ScratchSize
   )
 /*++
 
@@ -694,7 +728,7 @@ Returns:
 
 --*/
 {
-  uint8_t *Src;
+  const uint8_t *Src;
 
   *ScratchSize  = sizeof (SCRATCH_DATA);
 
@@ -703,18 +737,18 @@ Returns:
     return RETURN_INVALID_PARAMETER;
   }
 
-  *DstSize = (size_t)(Src[4]) + ((size_t)(Src[5]) << 8) + ((size_t)(Src[6]) << 16) + ((size_t)(Src[7]) << 24);
+  *DstSize = (size_t) (Src[4]) + ((size_t) (Src[5]) << 8) + ((size_t) (Src[6]) << 16) + ((size_t) (Src[7]) << 24);
   return RETURN_SUCCESS;
 }
 
 RETURN_STATUS
 Decompress (
-  void    *Source,
-  size_t  SrcSize,
-  void    *Destination,
-  size_t  DstSize,
-  void    *Scratch,
-  size_t  ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  void        *Destination,
+  size_t      DstSize,
+  void        *Scratch,
+  size_t      ScratchSize
   )
 /*
 
@@ -743,7 +777,7 @@ Returns:
   size_t         OrigSize;
   RETURN_STATUS  Status;
   SCRATCH_DATA   *Sd;
-  uint8_t        *Src;
+  const uint8_t  *Src;
   uint8_t        *Dst;
 
   Status  = RETURN_SUCCESS;
@@ -760,8 +794,8 @@ Returns:
     return RETURN_INVALID_PARAMETER;
   }
 
-  CompSize = (size_t)(Src[0]) + ((size_t)(Src[1]) << 8) + ((size_t)(Src[2]) << 16) + ((size_t)(Src[3]) << 24);
-  OrigSize = (size_t)(Src[4]) + ((size_t)(Src[5]) << 8) + ((size_t)(Src[6]) << 16) + ((size_t)(Src[7]) << 24);
+  CompSize = (size_t) (Src[0]) + ((size_t) (Src[1]) << 8) + ((size_t) (Src[2]) << 16) + ((size_t) (Src[3]) << 24);
+  OrigSize = (size_t) (Src[4]) + ((size_t) (Src[5]) << 8) + ((size_t) (Src[6]) << 16) + ((size_t) (Src[7]) << 24);
 
   if (SrcSize < CompSize + 8) {
     return RETURN_INVALID_PARAMETER;
@@ -803,10 +837,10 @@ Returns:
 
 RETURN_STATUS
 EfiGetInfo (
-  void    *Source,
-  size_t  SrcSize,
-  size_t  *DstSize,
-  size_t  *ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  size_t      *DstSize,
+  size_t      *ScratchSize
   )
 /*++
 
@@ -833,10 +867,10 @@ Returns:
 
 RETURN_STATUS
 TianoGetInfo ( //-V524
-  void    *Source,
-  size_t  SrcSize,
-  size_t  *DstSize,
-  size_t  *ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  size_t      *DstSize,
+  size_t      *ScratchSize
   )
 /*++
 
@@ -863,12 +897,12 @@ Returns:
 
 RETURN_STATUS
 EfiDecompress (
-  void    *Source,
-  size_t  SrcSize,
-  void    *Destination,
-  size_t  DstSize,
-  void    *Scratch,
-  size_t  ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  void        *Destination,
+  size_t      DstSize,
+  void        *Scratch,
+  size_t      ScratchSize
   )
 /*++
 
@@ -898,12 +932,12 @@ Returns:
 
 RETURN_STATUS
 TianoDecompress (
-  void    *Source,
-  size_t  SrcSize,
-  void    *Destination,
-  size_t  DstSize,
-  void    *Scratch,
-  size_t  ScratchSize
+  const void  *Source,
+  size_t      SrcSize,
+  void        *Destination,
+  size_t      DstSize,
+  void        *Scratch,
+  size_t      ScratchSize
   )
 /*++
 
@@ -931,15 +965,64 @@ Returns:
   return Decompress (Source, SrcSize, Destination, DstSize, Scratch, ScratchSize);
 }
 
-JNIEXPORT jbyteArray JNICALL Java_firmware_common_EFIDecompressor_nativeDecompress (
-  JNIEnv     *Env,
-  jclass     Class,
-  jbyteArray CompressedImage
+#ifdef CONFIG_FUZZ
+// LLVM libFuzzer target
+// clang -std=c11 -Wall -Wextra -O0 -g -fsanitize=address,fuzzer,leak,undefined -DCONFIG_FUZZ -o efidecompress_fuzz efidecompress.c
+// ./efidecompress_fuzz <corpus>
+// Compressed EFI images should be used for the corpus.
+int
+LLVMFuzzerTestOneInput (
+  const uint8_t  *Data,
+  size_t         Size
   )
 {
-  jsize CompressedImageSize = (*Env)->GetArrayLength (Env, CompressedImage);
-  jbyte *CompressedImageBytes = (*Env)->GetByteArrayElements (Env, CompressedImage, 0);
-  if (!CompressedImageBytes) {
+  size_t OutputSize;
+  size_t ScratchSize;
+
+  if (EfiGetInfo (Data, Size, &OutputSize, &ScratchSize) != RETURN_SUCCESS) {
+    return 0;
+  }
+
+  // Use 64 MiB as a maximum output size
+  if (OutputSize > 64 * 1024 * 1024) {
+    return 0;
+  }
+
+  uint8_t *OutputBuf = malloc (OutputSize * sizeof (uint8_t));
+  if (!OutputBuf) {
+    return 0;
+  }
+
+  uint8_t *ScratchBuf = malloc (ScratchSize * sizeof (uint8_t));
+  if (!ScratchBuf) {
+    free (OutputBuf);
+    return 0;
+  }
+
+  EfiDecompress (Data, Size, OutputBuf, OutputSize, ScratchBuf, ScratchSize);
+
+  free (ScratchBuf);
+  free (OutputBuf);
+  return 0;
+}
+#endif // CONFIG_FUZZ
+
+#ifdef CONFIG_JNI
+// JNI implementation with the following signature:
+// static byte[] EFIDecompressor.nativeDecompress(byte[] compressedImage)
+JNIEXPORT
+jbyteArray
+JNICALL
+Java_firmware_common_EFIDecompressor_nativeDecompress (
+  JNIEnv      *Env,
+  jclass      Class,
+  jbyteArray  CompressedImageArray
+  )
+{
+  // Get the contents of the compressed image.
+  jsize CompressedImageSize = (*Env)->GetArrayLength (Env, CompressedImageArray);
+  jbyte *CompressedImage = (*Env)->GetByteArrayElements (Env, CompressedImageArray, 0);
+  if (!CompressedImage) {
     return NULL;
   }
 
@@ -947,33 +1030,34 @@ JNIEXPORT jbyteArray JNICALL Java_firmware_common_EFIDecompressor_nativeDecompre
   size_t DstSize;
   size_t ScratchSize;
   if (EfiGetInfo (
-        CompressedImageBytes,
+        CompressedImage,
         CompressedImageSize,
         &DstSize,
         &ScratchSize
         )
       != RETURN_SUCCESS) {
-    (*Env)->ReleaseByteArrayElements (Env, CompressedImage, CompressedImageBytes, 0);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
     return NULL;
   }
 
   // Allocate memory for the uncompressed image buffer.
   jbyte *Buf = malloc (DstSize);
   if (!Buf) {
-    (*Env)->ReleaseByteArrayElements (Env, CompressedImage, CompressedImageBytes, 0);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
     return NULL;
   }
 
+  // Allocate memory for the scratch data.
   uint8_t *Sd = malloc (ScratchSize);
   if (!Sd) {
     free (Buf);
-    (*Env)->ReleaseByteArrayElements (Env, CompressedImage, CompressedImageBytes, 0);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
     return NULL;
   }
 
   // Decompress the image.
   if (EfiDecompress (
-        CompressedImageBytes,
+        CompressedImage,
         CompressedImageSize,
         (uint8_t *) Buf,
         DstSize,
@@ -983,19 +1067,119 @@ JNIEXPORT jbyteArray JNICALL Java_firmware_common_EFIDecompressor_nativeDecompre
       != RETURN_SUCCESS) {
     free (Sd);
     free (Buf);
-    (*Env)->ReleaseByteArrayElements (Env, CompressedImage, CompressedImageBytes, 0);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
   }
 
-  (*Env)->ReleaseByteArrayElements (Env, CompressedImage, CompressedImageBytes, 0);
-  jbyteArray DecompressedImage = (*Env)->NewByteArray (Env, DstSize);
-  if (!DecompressedImage) {
+  // Construct a Java byte array to store the decompressed image.
+  (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+  jbyteArray DecompressedImageArray = (*Env)->NewByteArray (Env, DstSize);
+  if (!DecompressedImageArray) {
     free (Sd);
     free (Buf);
     return NULL;
   }
 
-  (*Env)->SetByteArrayRegion (Env, DecompressedImage, 0, DstSize, Buf);
+  // Copy the contents of the decompressed image buffer to the Java byte array.
+  (*Env)->SetByteArrayRegion (Env, DecompressedImageArray, 0, DstSize, Buf);
   free (Sd);
   free (Buf);
-  return DecompressedImage;
+  return DecompressedImageArray;
 }
+#endif // CONFIG_JNI
+
+#ifdef CONFIG_UTIL
+int
+main (
+  int   argc,
+  char  *argv[]
+  )
+{
+  if (argc != 3) {
+    fprintf (stderr, "Usage: efidecompress <compressed input file> <output file>\n");
+    return 1;
+  }
+
+  FILE *InputFile = fopen (argv[1], "rb");
+  if (!InputFile) {
+    fprintf (stderr, "Failed to open %s: %s\n", argv[1], strerror (errno));
+    return 1;
+  }
+
+  fseek (InputFile, 0, SEEK_END);
+  size_t InputSize = ftell (InputFile);
+  rewind (InputFile);
+
+  uint8_t *InputBuf = malloc (InputSize * sizeof (uint8_t));
+  if (fread (InputBuf, sizeof (uint8_t), InputSize, InputFile) != InputSize) {
+    fprintf (stderr, "Failed to read %s\n", argv[1]);
+    free (InputBuf);
+    fclose (InputFile);
+    return 1;
+  }
+
+  size_t OutputSize;
+  size_t ScratchSize;
+  if (EfiGetInfo (InputBuf, InputSize, &OutputSize, &ScratchSize) != RETURN_SUCCESS) {
+    fprintf (stderr, "Failed to get compression info\n");
+    free (InputBuf);
+    fclose (InputFile);
+    return 1;
+  }
+
+  printf ("Compressed size is %zu bytes, uncompressed size is %zu bytes\n",
+          InputSize - 8, OutputSize);
+
+  uint8_t *OutputBuf = malloc (OutputSize * sizeof (uint8_t));
+  if (!OutputBuf) {
+    fprintf (stderr, "Failed to allocate memory for output buffer\n");
+    free (InputBuf);
+    fclose (InputFile);
+  }
+
+  uint8_t *ScratchBuf = malloc (ScratchSize * sizeof (uint8_t));
+  if (!ScratchBuf) {
+    fprintf (stderr, "Failed to allocate memory for scratch buffer\n");
+    free (OutputBuf);
+    free (InputBuf);
+    fclose (InputFile);
+  }
+
+  if (EfiDecompress (InputBuf, InputSize, OutputBuf, OutputSize,
+                     ScratchBuf, ScratchSize) != RETURN_SUCCESS) {
+    fprintf (stderr, "Failed to decompress input\n");
+    free (ScratchBuf);
+    free (OutputBuf);
+    free (InputBuf);
+    fclose (InputFile);
+    return 1;
+  }
+
+  FILE *OutputFile = fopen (argv[2], "wb");
+  if (!OutputFile) {
+    fprintf (stderr, "Failed to open %s: %s\n", argv[2], strerror (errno));
+    free (ScratchBuf);
+    free (OutputBuf);
+    free (InputBuf);
+    fclose (InputFile);
+  }
+
+  if (fwrite (OutputBuf, sizeof (uint8_t), OutputSize, OutputFile) != OutputSize) {
+    fprintf (stderr, "Failed to write %s\n", argv[2]);
+    fclose (OutputFile);
+    free (ScratchBuf);
+    free (OutputBuf);
+    free (InputBuf);
+    fclose (InputFile);
+  }
+
+  printf ("Wrote %zu bytes to %s\n", OutputSize, argv[2]);
+
+  fclose (OutputFile);
+  free (ScratchBuf);
+  free (OutputBuf);
+  free (InputBuf);
+  fclose (InputFile);
+
+  return 0;
+}
+#endif // CONFIG_UTIL

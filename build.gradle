@@ -28,19 +28,18 @@ model {
 			}
 
 			binaries.all {
+				cCompiler.args '-DCONFIG_JNI'
+				cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 				if (targetPlatform.operatingSystem.macOsX) {
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/darwin"
 					cCompiler.args '-mmacosx-version-min=10.4'
 					linker.args '-mmacosx-version-min=10.4'
 				} else if (targetPlatform.operatingSystem.linux) {
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/linux"
 					cCompiler.args '-D_FILE_OFFSET_BITS=64'
 				} else if (targetPlatform.operatingSystem.windows) {
 					// TODO: test Windows JNI library support
-					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
-					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}/include/win32"
+					cCompiler.args '-I' "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/win32"
 					linker.args "Shlwapi.lib", "Advapi32.lib"
 				}
 			}

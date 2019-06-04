@@ -9,8 +9,8 @@
 
 **/
 
-#ifndef EFIDECOMPRESS_H_
-#define EFIDECOMPRESS_H_
+#ifndef EFIDECOMPRESS_H
+#define EFIDECOMPRESS_H
 
 #include <stdint.h>
 
@@ -23,7 +23,7 @@ typedef uint64_t RETURN_STATUS;
 ///
 /// Set the upper bit to indicate EFI Error.
 ///
-#define ENCODE_ERROR(a)              ((RETURN_STATUS)(0x8000000000000000LL | (a)))
+#define ENCODE_ERROR(a)              ((RETURN_STATUS) (0x8000000000000000LL | (a)))
 
 #define RETURN_SUCCESS               0
 #define RETURN_LOAD_ERROR            ENCODE_ERROR (1)
@@ -56,4 +56,4 @@ typedef uint64_t RETURN_STATUS;
 #define RETURN_END_OF_MEDIA          ENCODE_ERROR (28)
 #define RETURN_END_OF_FILE           ENCODE_ERROR (31)
 
-#endif // EFIDECOMPRESS_H_
+#endif // !EFIDECOMPRESS_H
