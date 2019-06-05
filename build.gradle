@@ -16,8 +16,16 @@
 
 apply plugin: 'c'
 model {
+	platforms {
+		x64 {
+			architecture "x86_64"
+		}
+	}
+
 	components {
 		efidecompress(NativeLibrarySpec) {
+			targetPlatform 'x64'
+
 			sources {
 				c {
 					source {
@@ -29,18 +37,18 @@ model {
 
 			binaries.all {
 				cCompiler.args '-DCONFIG_JNI'
-				cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 				if (targetPlatform.operatingSystem.macOsX) {
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/darwin"
-					cCompiler.args '-mmacosx-version-min=10.4'
-					linker.args '-mmacosx-version-min=10.4'
+					cCompiler.args '-mmacosx-version-min=10.6'
+					linker.args '-mmacosx-version-min=10.6'
 				} else if (targetPlatform.operatingSystem.linux) {
+					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/linux"
 					cCompiler.args '-D_FILE_OFFSET_BITS=64'
 				} else if (targetPlatform.operatingSystem.windows) {
-					// TODO: test Windows JNI library support
-					cCompiler.args '-I' "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/win32"
-					linker.args "Shlwapi.lib", "Advapi32.lib"
+					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}\\include"
+					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}\\include\\win32"
 				}
 			}
 		}
@@ -55,7 +63,7 @@ task copyLibrary(type: Copy) {
 	} else if (Os.isFamily(Os.FAMILY_UNIX)) {
 		from file("$buildDir/libs/efidecompress/shared/libefidecompress.so") into "$projectDir/os/linux64"
 	} else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-		from file("$buildDir/libs/efidecompress/shared/libefidecompress/win32.dll") into file("$projectDir/os/win64/efidecompress.dll")
+		from file("$buildDir\\libs\\efidecompress\\shared\\efidecompress.dll") into "$projectDir\\os\\win64"
 	}
 }
 
