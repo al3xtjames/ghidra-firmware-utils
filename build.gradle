@@ -90,7 +90,7 @@ else {
 buildExtension.dependsOn 'copyLibrary'
 
 clean {
-	delete "$projectDir/os/linux64/libefidecompress.libefidecompress.so"
+	delete "$projectDir/os/linux64/libefidecompress.so"
 	delete "$projectDir/os/osx64/libefidecompress.dylib"
-	delete "$projectDir/os/win64/libefidecompress.dll"
+	delete "$projectDir/os/win64/efidecompress.dll"
 }
