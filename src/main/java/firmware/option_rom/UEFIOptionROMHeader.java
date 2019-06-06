@@ -46,7 +46,7 @@ import java.util.Formatter;
  *   | u16     |    2 | PCI Data Structure Offset                 |
  *   +---------+--------------------------------------------------+
  *
- * See OptionROMConstants for possible EFI Subsytem and Machine Type values.
+ * See OptionROMConstants for possible EFI Subsystem and Machine Type values.
  *
  * The EFI Image Offset field in the ROM header is used to locate the EFI PE32+ executable. If the
  * EFI Compression Type field is set to 1, the PE32+ executable is compressed with the EFI
@@ -73,6 +73,12 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 	 */
 	public UEFIOptionROMHeader(BinaryReader reader) throws IOException {
 		super(reader);
+		byte codeType = getPCIRHeader().getCodeType();
+		if (codeType != OptionROMConstants.CodeType.EFI) {
+			throw new IOException("Code type mismatch: expected EFI (3), got " +
+					OptionROMConstants.CodeType.toString(codeType) + " (" + codeType + ')');
+		}
+
 		reader.setPointerIndex(0x2);
 		imageSize = reader.readNextShort();
 		efiSignature = reader.readNextInt();
@@ -106,17 +112,17 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 	}
 
 	@Override
-	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("uefi_option_rom_header", 0);
-		structure.add(WORD, "signature", null);
-		structure.add(WORD, "image_size", null);
-		structure.add(DWORD, "efi_signature", null);
-		structure.add(WORD, "efi_subsystem", null);
-		structure.add(WORD, "efi_machine_type", null);
-		structure.add(WORD, "efi_compression_type", null);
-		structure.add(new ArrayDataType(BYTE, 0x8, BYTE.getLength()), "reserved", null);
-		structure.add(WORD, "efi_image_offset", null);
-		structure.add(WORD, "pcir_offset", null);
+	public DataType toDataType() {
+		Structure structure = new StructureDataType("uefi_option_rom_header_t", 0);
+		structure.add(WORD, 2,"signature", null);
+		structure.add(WORD, 2, "image_size", null);
+		structure.add(DWORD, 4, "efi_signature", null);
+		structure.add(WORD, 2, "efi_subsystem", null);
+		structure.add(WORD, 2, "efi_machine_type", null);
+		structure.add(WORD, 2, "efi_compression_type", null);
+		structure.add(new ArrayDataType(BYTE, 0x8, 1), "reserved", null);
+		structure.add(POINTER, 2,"efi_image_offset", null);
+		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
 	}
 

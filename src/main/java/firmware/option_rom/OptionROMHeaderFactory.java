@@ -24,7 +24,9 @@ import java.io.IOException;
  * Factory for constructing the correct option ROM type based off the code type field in the PCI
  * data structure header.
  */
-public abstract class OptionROMHeaderFactory {
+public class OptionROMHeaderFactory {
+	private OptionROMHeaderFactory() {}
+
 	/**
 	 * Constructs an OptionROMHeader from a specified BinaryReader by checking the code type field
 	 * in the PCI data structure header.

@@ -25,7 +25,9 @@ import java.io.FileNotFoundException;
 /**
  * Utility class for loading native libraries.
  */
-public abstract class JNILibraryLoader {
+public class JNILibraryLoader {
+	private JNILibraryLoader() {}
+
 	/**
 	 * Loads a specified native library from the os directory.
 	 *

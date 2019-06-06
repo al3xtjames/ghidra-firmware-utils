@@ -49,8 +49,7 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 	private byte imageSize;
 	private byte[] entryPointInstruction;
 
-	private short entryPointOffset;
-	private byte[] x86Image;
+	private int entryPointOffset;
 
 	/**
 	 * Constructs a LegacyOptionROMHeader from a specified BinaryReader.
@@ -59,6 +58,12 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 	 */
 	public LegacyOptionROMHeader(BinaryReader reader) throws IOException {
 		super(reader);
+		byte codeType = getPCIRHeader().getCodeType();
+		if (codeType != OptionROMConstants.CodeType.PC_AT_COMPATIBLE) {
+			throw new IOException("Code type mismatch: expected PC-AT compatible (0), got " +
+					OptionROMConstants.CodeType.toString(codeType) + " (" + codeType + ')');
+		}
+
 		reader.setPointerIndex(0x2);
 		imageSize = reader.readNextByte();
 		entryPointInstruction = reader.readNextByteArray(3);
@@ -66,46 +71,37 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		// The entry point field usually contains a relative JMP instruction. Decode it to find the
 		// address of the entry point.
 		entryPointOffset = 0x3;
-		int executableSize;
 		if (entryPointInstruction[0] == (byte) 0xEB) {
 			// JMP rel8 (relative to next instruction)
 			entryPointOffset += entryPointInstruction[1];
 			entryPointOffset += 0x2; // Size of the instruction (offset to next instruction)
-			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - entryPointOffset;
 		} else if (entryPointInstruction[0] == (byte) 0xE9) {
 			// JMP rel16 (relative to next instruction)
-			entryPointOffset +=
-					(short) (entryPointInstruction[2] << 8 | entryPointInstruction[1] & 0xFF);
+			entryPointOffset += (short)
+					(entryPointInstruction[2] << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
 			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
-			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - entryPointOffset;
-		} else {
-			executableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - 0x3;
 		}
 
-		reader.setPointerIndex(entryPointOffset);
-		x86Image = reader.readNextByteArray(executableSize);
+		reader.setPointerIndex(0);
 	}
 
 	/**
-	 * Returns a ByteArrayInputStream for the contents of the image, starting at the decoded entry
-	 * point from the entry point field in the ROM header. This should be treated as a raw 16-bit
-	 * x86 binary.
+	 * Returns the decoded entry point offset.
 	 *
-	 * @return a ByteArrayInputStream for the contents of the image
+	 * @return the decoded entry point offset
 	 */
-	@Override
-	public ByteArrayInputStream getImageStream() {
-		return new ByteArrayInputStream(x86Image);
+	public int getEntryPointOffset() {
+		return entryPointOffset;
 	}
 
 	@Override
-	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("x86_option_rom_header", 0);
-		structure.add(WORD, "signature", null);
-		structure.add(BYTE, "image_size", null);
-		structure.add(new ArrayDataType(BYTE, 0x3, BYTE.getLength()), "entry_point_instruction", null);
-		structure.add(new ArrayDataType(BYTE, 0x12, BYTE.getLength()), "reserved", null);
-		structure.add(WORD, "pcir_offset", null);
+	public DataType toDataType() {
+		Structure structure = new StructureDataType("x86_option_rom_header_t", 0);
+		structure.add(WORD, 2, "signature", null);
+		structure.add(BYTE, 1, "image_size", null);
+		structure.add(new ArrayDataType(BYTE, 0x3, 1), "entry_point_instruction", null);
+		structure.add(new ArrayDataType(BYTE, 0x12, 1), "reserved", null);
+		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
 	}
 

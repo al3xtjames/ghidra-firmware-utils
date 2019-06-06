@@ -6,13 +6,11 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
 
 ## Features (very much WIP)
 ### PCI option ROM loader
- - Implements a FS loader for PCI option ROMs (handles hybrid ROMs,
-   e.g. legacy x86 + UEFI)
+ - Implements a FS loader for PCI option ROMs (handles hybrid ROMs with
+   multiple images, e.g. legacy x86 + UEFI)
  - Loads UEFI executables from PCI option ROMs (including compressed images)
- - Calculates entry point address for legacy x86 option ROMs (still needs to be
-   manually loaded as a raw real-mode binary)
- - TODO: Write loader for legacy x86 option ROMs (automatically select
-   real-mode x86)
+ - Defines the entry point function and various header data types for legacy
+   x86 option ROMs
 
 ## Planned functionality / TODO
 ### Firmware image loader
@@ -38,10 +36,17 @@ select the green plus to browse to the extension. Restart Ghidra when prompted.
 
 ## Usage
 ### PCI option ROM loader
-Add a PCI option ROM to a Ghidra project. When prompted to select an import
-mode, select **File system**. The images contained within the option ROM will
-be displayed, and can be imported for analysis. Information for each image can
-be displayed by selecting **Get Info** in the right-click menu for an image.
+Add a PCI option ROM to a Ghidra project. Legacy x86 option ROMs can be
+directly loaded for analysis. Ensure that the binary format is set to
+**x86 PCI Option ROM**, and import the binary.
+
+UEFI option ROMs or option ROMs that contain more than one image should be
+imported using the filesystem loader. When prompted to select an import mode,
+select **File system**. The images contained within the option ROM will be
+displayed, and can be imported for analysis. Legacy x86 images will be handled
+the x86 PCI Option ROM loader, and UEFI images will be handled by the PE32
+loader (compression is supported). Information for each image can be displayed
+by selecting **Get Info** in the right-click menu.
 
 ## License
 Apache 2.0, with some exceptions:

@@ -22,7 +22,7 @@ import util.JNILibraryLoader;
 /**
  * Handles the decompression of images compressed with the EFI Compression Algorithm.
  */
-public abstract class EFIDecompressor {
+public class EFIDecompressor {
 	private static boolean loadFailed = false;
 	private static Throwable throwable = null;
 
@@ -34,6 +34,8 @@ public abstract class EFIDecompressor {
 			throwable = t;
 		}
 	}
+
+	private EFIDecompressor() {}
 
 	/**
 	 * Decompresses the specified compressed image. Implemented by the efidecompress native

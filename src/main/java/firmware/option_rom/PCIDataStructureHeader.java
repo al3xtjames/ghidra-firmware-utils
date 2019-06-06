@@ -109,28 +109,28 @@ public class PCIDataStructureHeader implements StructConverter {
 	}
 
 	@Override
-	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("pci_data_structure_header", 0);
+	public DataType toDataType() {
+		Structure structure = new StructureDataType("pci_data_structure_header_t", 0);
 		structure.add(new ArrayDataType(ASCII, 4, ASCII.getLength()), "signature", null);
-		structure.add(BYTE, "vendor_id", null);
-		structure.add(BYTE, "device_id", null);
+		structure.add(WORD, 2, "vendor_id", null);
+		structure.add(WORD, 2, "device_id", null);
 		if (headerRevision == 3) {
-			structure.add(WORD, "device_list_offset", null);
+			structure.add(WORD, 2, "device_list_offset", null);
 		} else {
-			structure.add(WORD, "reserved_1", null);
+			structure.add(WORD, 2, "reserved_1", null);
 		}
 
-		structure.add(WORD, "pcir_header_len", null);
-		structure.add(WORD, "pcir_header_rev", null);
-		structure.add(new ArrayDataType(BYTE, 3, BYTE.getLength()), "class_code", null);
-		structure.add(WORD, "image_len", null);
-		structure.add(WORD, "vendor_rom_rev", null);
-		structure.add(BYTE, "code_type", null);
-		structure.add(BYTE, "last_image_indicator", null);
+		structure.add(WORD, 2, "pcir_header_len", null);
+		structure.add(BYTE, 1, "pcir_header_rev", null);
+		structure.add(new ArrayDataType(BYTE, 3, 1), "class_code", null);
+		structure.add(WORD, 2, "image_len", null);
+		structure.add(WORD, 2, "vendor_rom_rev", null);
+		structure.add(BYTE, 1, "code_type", null);
+		structure.add(BYTE, 1, "last_image_indicator", null);
 		if (headerRevision == 3) {
-			structure.add(WORD, "max_runtime_image_len", null);
-			structure.add(WORD, "config_utility_code_offset", null);
-			structure.add(WORD, "dmtf_clp_entry_point_offset", null);
+			structure.add(WORD, 2, "max_runtime_image_len", null);
+			structure.add(WORD, 2, "config_utility_code_offset", null);
+			structure.add(WORD, 2, "dmtf_clp_entry_point_offset", null);
 		} else {
 			structure.add(WORD, "reserved_2", null);
 		}
@@ -144,7 +144,7 @@ public class PCIDataStructureHeader implements StructConverter {
 		formatter.format("Vendor ID: 0x%X\n", vendorID);
 		formatter.format("Device ID: 0x%X\n", deviceID);
 		formatter.format("Image Length: 0x%X\n", getImageLength());
-		formatter.format("Vendor ROM Revison: 0x%X\n", romRevision);
+		formatter.format("Vendor ROM Revision: 0x%X\n", romRevision);
 		formatter.format("Code Type: %s (%d)\n", OptionROMConstants.CodeType.toString(codeType),
 				codeType);
 		formatter.format("Last Image: %b\n", isLastImage());

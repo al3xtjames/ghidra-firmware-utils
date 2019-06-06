@@ -80,7 +80,7 @@ import java.util.Formatter;
 public class OptionROMHeader implements StructConverter {
 	// Original header fields
 	private short signature;
-	private short pcirOffset;
+	private int pcirOffset;
 
 	private PCIDataStructureHeader pcirHeader;
 	private byte[] rawImage;
@@ -129,12 +129,21 @@ public class OptionROMHeader implements StructConverter {
 		return pcirHeader;
 	}
 
+	/**
+	 * Returns the offset of the PCI data structure header in the current image.
+	 *
+	 * @return the offset of the PCI data structure header in the current image
+	 */
+	public int getPCIRHeaderOffset() {
+		return pcirOffset;
+	}
+
 	@Override
-	public DataType toDataType() throws DuplicateNameException, IOException {
-		Structure structure = new StructureDataType("option_rom_header", 0);
-		structure.add(WORD, "signature", null);
-		structure.add(new ArrayDataType(BYTE, 0x16, BYTE.getLength()), "reserved", null);
-		structure.add(WORD, "pcir_offset", null);
+	public DataType toDataType() {
+		Structure structure = new StructureDataType("option_rom_header_t", 0);
+		structure.add(WORD, 2, "signature", null);
+		structure.add(new ArrayDataType(BYTE, 0x16, 1), "reserved", null);
+		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
 	}
 

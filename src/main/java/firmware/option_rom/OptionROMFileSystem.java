@@ -42,7 +42,21 @@ public class OptionROMFileSystem extends GFileSystemBase {
 	@Override
 	public boolean isValid(TaskMonitor monitor) throws IOException {
 		byte[] signature = provider.readBytes(0, 2);
-		return Arrays.equals(signature, OptionROMConstants.ROM_SIGNATURE_BYTES);
+		if (!Arrays.equals(signature, OptionROMConstants.ROM_SIGNATURE_BYTES)) {
+			return false;
+		}
+
+		try {
+			// Ignore option ROMs that contain a single legacy x86 image; those should be loaded
+			// directly by LegacyOptionROMLoader.
+			BinaryReader reader = new BinaryReader(provider, true);
+			LegacyOptionROMHeader header = new LegacyOptionROMHeader(reader);
+			// This is needed to avoid treating nested images (e.g. a legacy image in an open
+			// hybrid expansion ROM filesystem) as an identical ROM filesystem.
+			return header.getPCIRHeader().getImageLength() != provider.length();
+		} catch (IOException e) {}
+
+		return true;
 	}
 
 	@Override
