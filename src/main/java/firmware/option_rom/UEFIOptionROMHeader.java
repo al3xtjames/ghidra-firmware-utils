@@ -22,7 +22,6 @@ import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
-import ghidra.util.exception.DuplicateNameException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

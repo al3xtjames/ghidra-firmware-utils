@@ -22,7 +22,6 @@ import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
-import ghidra.util.exception.DuplicateNameException;
 
 import java.io.IOException;
 import java.util.Formatter;
@@ -81,21 +80,34 @@ public class PCIDataStructureHeader implements StructConverter {
 	}
 
 	/**
-	 * Returns the size of the current image.
-	 *
-	 * @return the size of the current image
-	 */
-	public int getImageLength() {
-		return imageLength * OptionROMConstants.ROM_SIZE_UNIT;
-	}
-
-	/**
 	 * Returns the current image's code type.
 	 *
 	 * @return the current image's code type
 	 */
 	public byte getCodeType() {
 		return codeType;
+	}
+
+	/**
+	 * Returns the device list offset.
+	 *
+	 * @return the device list offset
+	 */
+	public short getDeviceListOffset() {
+		if (headerRevision == 3) {
+			return deviceListOffset;
+		} else {
+			return 0;
+		}
+	}
+
+	/**
+	 * Returns the size of the current image.
+	 *
+	 * @return the size of the current image
+	 */
+	public int getImageLength() {
+		return imageLength * OptionROMConstants.ROM_SIZE_UNIT;
 	}
 
 	/**
@@ -111,7 +123,7 @@ public class PCIDataStructureHeader implements StructConverter {
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("pci_data_structure_header_t", 0);
-		structure.add(new ArrayDataType(ASCII, 4, ASCII.getLength()), "signature", null);
+		structure.add(new ArrayDataType(ASCII, 4, 1), "signature", null);
 		structure.add(WORD, 2, "vendor_id", null);
 		structure.add(WORD, 2, "device_id", null);
 		if (headerRevision == 3) {
@@ -147,7 +159,7 @@ public class PCIDataStructureHeader implements StructConverter {
 		formatter.format("Vendor ROM Revision: 0x%X\n", romRevision);
 		formatter.format("Code Type: %s (%d)\n", OptionROMConstants.CodeType.toString(codeType),
 				codeType);
-		formatter.format("Last Image: %b\n", isLastImage());
+		formatter.format("Last Image: %b", isLastImage());
 		return formatter.toString();
 	}
 }

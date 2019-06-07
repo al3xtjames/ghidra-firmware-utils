@@ -22,7 +22,6 @@ import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
-import ghidra.util.exception.DuplicateNameException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -83,6 +82,7 @@ public class OptionROMHeader implements StructConverter {
 	private int pcirOffset;
 
 	private PCIDataStructureHeader pcirHeader;
+	private DeviceList deviceList;
 	private byte[] rawImage;
 
 	/**
@@ -102,9 +102,24 @@ public class OptionROMHeader implements StructConverter {
 		reader.setPointerIndex(pcirOffset);
 		pcirHeader = new PCIDataStructureHeader(reader);
 
+		// Read the device list (if present).
+		if (pcirHeader.getDeviceListOffset() != 0) {
+			reader.setPointerIndex(pcirOffset + pcirHeader.getDeviceListOffset());
+			deviceList = new DeviceList(reader);
+		}
+
 		// Copy the contents of the entire image.
 		reader.setPointerIndex(0);
 		rawImage = reader.readNextByteArray(pcirHeader.getImageLength());
+	}
+
+	/**
+	 * Returns the device list (if present).
+	 *
+	 * @return the device list; null if not present
+	 */
+	public DeviceList getDeviceList() {
+		return deviceList;
 	}
 
 	/**
@@ -152,6 +167,10 @@ public class OptionROMHeader implements StructConverter {
 		Formatter formatter = new Formatter();
 		formatter.format("PCI Data Structure Offset: 0x%X\n", pcirOffset);
 		formatter.format("%s\n", pcirHeader.toString());
+		if (deviceList != null) {
+			formatter.format("%s\n", deviceList.toString());
+		}
+
 		return formatter.toString();
 	}
 }

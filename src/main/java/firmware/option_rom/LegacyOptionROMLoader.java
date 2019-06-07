@@ -77,16 +77,20 @@ public class LegacyOptionROMLoader extends AbstractLibrarySupportLoader {
 		api.addEntryPoint(entryPoint);
 		api.createFunction(entryPoint, "entry");
 
-		// Mark the legacy option ROM header and PCI data structure as data.
+		// Mark the legacy option ROM header, PCI data structure, and device list as data.
 		try {
 			api.createData(api.toAddr(0), header.toDataType());
-			api.createData(api.toAddr(header.getPCIRHeaderOffset()),
-					header.getPCIRHeader().toDataType());
+			PCIDataStructureHeader pcirHeader = header.getPCIRHeader();
+			api.createData(api.toAddr(header.getPCIRHeaderOffset()), pcirHeader.toDataType());
+
+			DeviceList deviceList = header.getDeviceList();
+			if (deviceList != null) {
+				api.createData(api.toAddr(header.getPCIRHeaderOffset() +
+						pcirHeader.getDeviceListOffset()), deviceList.toDataType());
+			}
 		} catch (Exception e) {
 			Msg.showError(this, null, getName() + " Loader", e.getMessage(), e);
 		}
-
-		// TODO: Define a data type for the device list (if present)
 	}
 
 	@Override
