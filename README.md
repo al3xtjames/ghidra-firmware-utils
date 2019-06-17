@@ -62,8 +62,11 @@ Apache 2.0, with some exceptions:
 [Decompress.c][4] from uefi-firmware-parser (which itself is derived from
 [the original in EDK2 BaseTools][5]).
 
+`lib/xz-1.8.jar` is taken from the [XZ for Java][6] project.
+
 [1]: https://ghidra-sre.org/
 [2]: https://summerofcode.withgoogle.com/projects/#6413737605464064
 [3]: https://github.com/danse-macabre/ida-efitools
 [4]: https://github.com/theopolis/uefi-firmware-parser/blob/21106baf019db9dcd046a3c01ee7b32212de45a5/uefi_firmware/compression/Tiano/Decompress.c
 [5]: https://github.com/tianocore/edk2/blob/2e351cbe8e190271b3716284fc1076551d005472/BaseTools/Source/C/Common/Decompress.c
+[6]: https://tukaani.org/xz/java.html
