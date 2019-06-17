@@ -123,7 +123,8 @@ public class PCIDataStructureHeader implements StructConverter {
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("pci_data_structure_header_t", 0);
-		structure.add(new ArrayDataType(ASCII, 4, 1), "signature", null);
+		structure.add(new ArrayDataType(ASCII, OptionROMConstants.PCIR_SIGNATURE.length(), 1),
+				"signature", null);
 		structure.add(WORD, 2, "vendor_id", null);
 		structure.add(WORD, 2, "device_id", null);
 		if (headerRevision == 3) {

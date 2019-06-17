@@ -49,7 +49,7 @@ public final class OptionROMConstants {
 				case EFI:
 					return "EFI";
 				default:
-					return String.format("Unknown code type (0x%X)", codeType);
+					return "Unknown";
 			}
 		}
 	}

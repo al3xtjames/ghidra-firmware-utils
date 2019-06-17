@@ -33,10 +33,11 @@ import java.util.List;
 
 @FileSystemInfo(type = "pcir", description = "PCI Option ROM", factory = GFileSystemBaseFactory.class)
 public class OptionROMFileSystem extends GFileSystemBase {
-	private HashMap<GFile, OptionROMHeader> map = new HashMap<>();
+	private HashMap<GFile, OptionROMHeader> map;
 
 	public OptionROMFileSystem(String fileSystemName, ByteProvider provider) {
 		super(fileSystemName, provider);
+		map = new HashMap<>();
 	}
 
 	@Override
@@ -89,7 +90,7 @@ public class OptionROMFileSystem extends GFileSystemBase {
 	}
 
 	@Override
-	protected InputStream getData(GFile file, TaskMonitor monitor) throws IOException {
+	protected InputStream getData(GFile file, TaskMonitor monitor) {
 		OptionROMHeader entry = map.get(file);
 		return entry.getImageStream();
 	}
@@ -101,7 +102,7 @@ public class OptionROMFileSystem extends GFileSystemBase {
 	}
 
 	@Override
-	public List<GFile> getListing(GFile directory) throws IOException {
+	public List<GFile> getListing(GFile directory) {
 		if (directory == null || directory.equals(root)) {
 			ArrayList<GFile> roots = new ArrayList<>();
 			for (GFile file : map.keySet()) {
