@@ -26,14 +26,16 @@ import java.util.Formatter;
  * Parser for flash areas, which have the following structure:
  *
  *   Flash Map Header
- *   +----------+--------------------------------------------------------------+
+ *   +----------+------+-------------------------------------------------------+
  *   | Type     | Size | Description                                           |
- *   +----------+--------------------------------------------------------------+
+ *   +----------+------+-------------------------------------------------------+
  *   | u32      |    4 | Offset (Relative to Base Address in Flash Map Header) |
- *   | u32      |    4 | Size                                                  |
+ *   | u32      |    4 | Size of Flash Area                                    |
  *   | char[32] |   32 | Name of Flash Area                                    |
  *   | u16      |    2 | Flash Area Flags                                      |
- *   +----------+--------------------------------------------------------------+
+ *   +----------+------+-------------------------------------------------------+
+ *
+ * See FlashMapConstants.AreaFlags for possible Flash Area Flags.
  */
 public class FlashMapArea {
 	// Original header fields
@@ -45,7 +47,7 @@ public class FlashMapArea {
 	private byte[] data;
 
 	/**
-	 * Constructs an FlashMapArea from a specified BinaryReader.
+	 * Constructs a FlashMapArea from a specified BinaryReader.
 	 *
 	 * @param reader the specified BinaryReader
 	 */
@@ -103,20 +105,8 @@ public class FlashMapArea {
 		formatter.format("Flash area name: %s\n", name);
 		formatter.format("Flash area offset: 0x%X\n", offset);
 		formatter.format("Flash area size: 0x%X\n", size);
-		formatter.format("Flash area flags: ");
-		if (flags == 0) {
-			formatter.format("None ");
-		} else if ((flags & FlashMapConstants.FMAP_AREA_STATIC) != 0) {
-			formatter.format("Static ");
-		} else if ((flags & FlashMapConstants.FMAP_AREA_COMPRESSED) != 0) {
-			formatter.format("Compressed ");
-		} else if ((flags & FlashMapConstants.FMAP_AREA_READONLY) != 0) {
-			formatter.format("Read-only ");
-		} else if ((flags & FlashMapConstants.FMAP_AREA_PRESERVE) != 0) {
-			formatter.format("Preserved ");
-		}
-
-		formatter.format("(0x%X)", flags);
+		formatter.format("Flash area flags: %s (0x%X)",
+				FlashMapConstants.FlashAreaFlags.toString(flags), flags);
 		return formatter.toString();
 	}
 }

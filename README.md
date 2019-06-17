@@ -14,6 +14,7 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
 
 ### Firmware image loader (WIP)
  - Implements a FS loader for Flash Map (FMAP) images (shows flash regions)
+ - Implements a FS loader for Coreboot Filesystem (CBFS) images
 
 ## Planned functionality / TODO
 ### Firmware image loader

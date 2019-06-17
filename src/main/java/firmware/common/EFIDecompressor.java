@@ -46,7 +46,7 @@ public class EFIDecompressor {
 	private static native byte[] nativeDecompress(byte[] compressedImage);
 
 	/**
-	 * Decompressed the specified compressed image.
+	 * Decompress the specified compressed image.
 	 *
 	 * @param compressedImage the compressed image
 	 */

@@ -31,9 +31,9 @@ import java.util.Formatter;
  * Parser for UEFI option ROM images. There are additional fields in the ROM header:
  *
  *   ROM Header
- *   +---------+--------------------------------------------------+
+ *   +---------+------+-------------------------------------------+
  *   | Type    | Size | Description                               |
- *   +---------+--------------------------------------------------+
+ *   +---------+------+-------------------------------------------+
  *   | u16     |    2 | Signature (0xAA55, little endian)         |
  *   | u16     |    2 | Image Size (in units of 512 bytes)        |
  *   | u32     |    4 | EFI Signature (0x00000EF1, little endian) |
@@ -43,7 +43,7 @@ import java.util.Formatter;
  *   | u8[8]   |    8 | Reserved                                  |
  *   | u16     |    2 | EFI Image Offset                          |
  *   | u16     |    2 | PCI Data Structure Offset                 |
- *   +---------+--------------------------------------------------+
+ *   +---------+------+-------------------------------------------+
  *
  * See OptionROMConstants for possible EFI Subsystem and Machine Type values.
  *

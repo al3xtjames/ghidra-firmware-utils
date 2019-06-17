@@ -28,9 +28,9 @@ import java.io.IOException;
  * firmware binary.
  *
  *   Flash Map Header
- *   +----------+--------------------------------+
+ *   +----------+------+-------------------------+
  *   | Type     | Size | Description             |
- *   +----------+--------------------------------+
+ *   +----------+------+-------------------------+
  *   | char[8]  |    8 | Signature ("__FMAP__")  |
  *   | u8       |    1 | Major Version           |
  *   | u8       |    1 | Minor Version           |
@@ -38,7 +38,7 @@ import java.io.IOException;
  *   | u32      |    4 | Size                    |
  *   | char[32] |   32 | Name of Firmware Binary |
  *   | u16      |    2 | Number of flash areas   |
- *   +----------+--------------------------------+
+ *   +----------+------+-------------------------+
  *
  * The flash area structures immediately follow the flash map header. See FlashMapArea for a
  * description of the fields.
@@ -56,7 +56,7 @@ public class FlashMapHeader {
 	private FlashMapArea[] areas;
 
 	/**
-	 * Constructs an FlashMapHeader from a specified BinaryReader.
+	 * Constructs a FlashMapHeader from a specified BinaryReader.
 	 *
 	 * @param reader the specified BinaryReader
 	 */

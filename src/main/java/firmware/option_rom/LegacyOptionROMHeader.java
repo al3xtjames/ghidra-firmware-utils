@@ -30,15 +30,15 @@ import java.util.Formatter;
  * header:
  *
  *   ROM Header
- *   +---------+-------------------------------------------+
+ *   +---------+------+------------------------------------+
  *   | Type    | Size | Description                        |
- *   +---------+-------------------------------------------+
+ *   +---------+------+------------------------------------+
  *   | u16     |    2 | Signature (0xAA55, little endian)  |
  *   | u8      |    1 | Image Size (in units of 512 bytes) |
  *   | u8[3]   |    3 | Entry Point                        |
  *   | u8[18]  |   18 | Reserved                           |
  *   | u16     |    2 | PCI Data Structure Offset          |
- *   +---------+-------------------------------------------+
+ *   +---------+------+------------------------------------+
  *
  * The Entry Point field in the ROM header usually contains a JMP (rel8 or rel16) instruction.
  */
