@@ -12,11 +12,14 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
  - Defines the entry point function and various header data types for legacy
    x86 option ROMs
 
+### Firmware image loader (WIP)
+ - Implements a FS loader for Flash Map (FMAP) images (shows flash regions)
+
 ## Planned functionality / TODO
 ### Firmware image loader
  - Implement FS loader for firmware images
- - Write parsers for Intel IFD (BIOS region), coreboot CBFS/FMAP, and UEFI
-   firmware volumes
+ - Write parsers for Intel IFD (BIOS region), coreboot CBFS, and UEFI firmware
+   volumes
 
 ### UEFI loader
  - Write helper script to import GUIDs/etc (similar to [ida-efitools][3])
