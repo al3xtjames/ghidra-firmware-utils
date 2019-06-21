@@ -222,8 +222,15 @@ public class IntelFlashDescriptor {
 		reader.setPointerIndex(headerOffset);
 		regions.add(new IntelFlashRegion(reader, IntelFlashDescriptorConstants.DESCRIPTOR_SIZE,
 				IntelFlashDescriptorConstants.FlashRegionType.FLASH_DESCRIPTOR));
-		// TODO: Implement UEFITool's workaround for calculating the BIOS region size for older
-		// Gigabyte flash descriptors
+		if ((biosLimit + 1 - biosBase) * 0x1000 == reader.length() - headerOffset) {
+			// For some older Gigabyte systems, the BIOS region in the flash descriptor spans the
+			// whole chip. Manually calculate the BIOS region base address using the ME region's
+			// limit address (which should be correct).
+			if (meLimit != 0) {
+				biosBase = meLimit + 1;
+			}
+		}
+
 		addRegion(reader, biosBase, biosLimit, IntelFlashDescriptorConstants.FlashRegionType.BIOS);
 		addRegion(reader, meBase, meLimit,
 				IntelFlashDescriptorConstants.FlashRegionType.MANAGEMENT_ENGINE);
@@ -231,6 +238,7 @@ public class IntelFlashDescriptor {
 				IntelFlashDescriptorConstants.FlashRegionType.GIGABIT_ETHERNET);
 		addRegion(reader, pdrBase, pdrLimit,
 				IntelFlashDescriptorConstants.FlashRegionType.PLATFORM_DATA);
+
 		if (ifdVersion == 2) {
 			addRegion(reader, devExp1Base, devExp1Limit,
 					IntelFlashDescriptorConstants.FlashRegionType.DEVICE_EXPANSION_1);
@@ -278,5 +286,8 @@ public class IntelFlashDescriptor {
 
 		reader.setPointerIndex(headerOffset + base * 0x1000);
 		regions.add(new IntelFlashRegion(reader, size, type));
+		Msg.debug(this, String.format("Adding %s region (base = 0x%X, size = 0x%X",
+				IntelFlashDescriptorConstants.FlashRegionType.toString(type), base * 0x1000,
+				size));
 	}
 }

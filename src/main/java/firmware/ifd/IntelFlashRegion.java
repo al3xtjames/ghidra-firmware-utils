@@ -79,6 +79,7 @@ public class IntelFlashRegion {
 		Formatter formatter = new Formatter();
 		formatter.format("Region name: %s (type %d)\n",
 				IntelFlashDescriptorConstants.FlashRegionType.toString(type), type);
+		formatter.format("Region base address: 0x%X\n", baseAddress);
 		formatter.format("Region size: 0x%X", length);
 		return formatter.toString();
 	}
