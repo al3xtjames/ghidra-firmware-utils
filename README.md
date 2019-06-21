@@ -13,8 +13,10 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
    x86 option ROMs
 
 ### Firmware image loader (WIP)
- - Implements a FS loader for Flash Map (FMAP) images (shows flash regions)
- - Implements a FS loader for Coreboot Filesystem (CBFS) images
+ - Implements a FS loader for Flash Map (FMAP) images and Intel Flash
+   Descriptor (IFD) images (shows flash regions)
+ - Implements a FS loader for Coreboot Filesystem (CBFS) images (displays
+   included files and handles compression)
 
 ## Planned functionality / TODO
 ### Firmware image loader
@@ -64,9 +66,13 @@ Apache 2.0, with some exceptions:
 
 `lib/xz-1.8.jar` is taken from the [XZ for Java][6] project.
 
+The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
+[UEFITool][7] as a reference.
+
 [1]: https://ghidra-sre.org/
 [2]: https://summerofcode.withgoogle.com/projects/#6413737605464064
 [3]: https://github.com/danse-macabre/ida-efitools
 [4]: https://github.com/theopolis/uefi-firmware-parser/blob/21106baf019db9dcd046a3c01ee7b32212de45a5/uefi_firmware/compression/Tiano/Decompress.c
 [5]: https://github.com/tianocore/edk2/blob/2e351cbe8e190271b3716284fc1076551d005472/BaseTools/Source/C/Common/Decompress.c
 [6]: https://tukaani.org/xz/java.html
+[7]: https://github.com/LongSoft/UEFITool

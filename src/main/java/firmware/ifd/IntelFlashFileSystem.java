@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package firmware.fmap;
+package firmware.ifd;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
@@ -29,15 +29,16 @@ import ghidra.util.task.TaskMonitor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-@FileSystemInfo(type = "fmap", description = "Flash Map", factory = GFileSystemBaseFactory.class)
-public class FlashMapFileSystem extends GFileSystemBase {
+@FileSystemInfo(type = "ifd", description = "Intel Flash Descriptor", factory = GFileSystemBaseFactory.class)
+public class IntelFlashFileSystem extends GFileSystemBase {
 	private long offset;
-	private HashMap<GFile, FlashMapArea> map;
+	private HashMap<GFile, IntelFlashRegion> map;
 
-	public FlashMapFileSystem(String fileSystemName, ByteProvider provider) {
+	public IntelFlashFileSystem(String fileSystemName, ByteProvider provider) {
 		super(fileSystemName, provider);
 		offset = 0;
 		map = new HashMap<>();
@@ -46,16 +47,20 @@ public class FlashMapFileSystem extends GFileSystemBase {
 	@Override
 	public boolean isValid(TaskMonitor monitor) throws IOException {
 		long remainingLength = provider.length();
-		while (remainingLength >= FlashMapConstants.FMAP_SIGNATURE.length()) {
-			String signature = new String(provider.readBytes(offset,
-					FlashMapConstants.FMAP_SIGNATURE.length()));
-			if (signature.equals(FlashMapConstants.FMAP_SIGNATURE)) {
-				Msg.debug(this, String.format("Found FMAP signature at 0x%X", offset));
+		while (remainingLength >= 4) {
+			byte[] signature = provider.readBytes(offset, 4);
+			if (Arrays.equals(signature, IntelFlashDescriptorConstants.IFD_SIGNATURE_BYTES)) {
+				Msg.debug(this, String.format("Found IFD signature at 0x%X", offset));
+				if (remainingLength <= IntelFlashDescriptorConstants.DESCRIPTOR_SIZE - 16) {
+					// Ignore binaries which lack regions other than the flash descriptor.
+					return false;
+				}
+
 				return true;
 			}
 
-			offset += FlashMapConstants.FMAP_SIGNATURE.length();
-			remainingLength -= FlashMapConstants.FMAP_SIGNATURE.length();
+			offset += 4;
+			remainingLength -= 4;
 		}
 
 		return false;
@@ -64,13 +69,15 @@ public class FlashMapFileSystem extends GFileSystemBase {
 	@Override
 	public void open(TaskMonitor monitor) throws IOException {
 		BinaryReader reader = new BinaryReader(provider, true);
-		reader.setPointerIndex(offset);
-		FlashMapHeader header = new FlashMapHeader(reader);
-		FlashMapArea[] areas = header.getAreas();
-		for (FlashMapArea area : areas) {
-			GFileImpl file = GFileImpl.fromPathString(this, root, area.getName(), null, false,
-					area.length());
-			map.put(file, area);
+		reader.setPointerIndex(offset - 16);
+		IntelFlashDescriptor ifd = new IntelFlashDescriptor(reader);
+		ArrayList<IntelFlashRegion> regions = ifd.getRegions();
+		for (IntelFlashRegion region : regions) {
+			String regionName = String.format("Region %02d - %s", region.getType(),
+					IntelFlashDescriptorConstants.FlashRegionType.toString(region.getType()));
+			GFileImpl file = GFileImpl.fromPathString(this, root, regionName, null, false,
+					region.length());
+			map.put(file, region);
 		}
 	}
 
@@ -82,14 +89,14 @@ public class FlashMapFileSystem extends GFileSystemBase {
 
 	@Override
 	protected InputStream getData(GFile file, TaskMonitor monitor) {
-		FlashMapArea area = map.get(file);
-		return area.getDataStream();
+		IntelFlashRegion entry = map.get(file);
+		return entry.getDataStream();
 	}
 
 	@Override
 	public String getInfo(GFile file, TaskMonitor monitor) {
-		FlashMapArea area = map.get(file);
-		return area.toString();
+		IntelFlashRegion entry = map.get(file);
+		return entry.toString();
 	}
 
 	@Override
