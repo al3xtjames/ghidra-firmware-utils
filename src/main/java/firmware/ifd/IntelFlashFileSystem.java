@@ -50,12 +50,12 @@ public class IntelFlashFileSystem extends GFileSystemBase {
 		while (remainingLength >= 4) {
 			byte[] signature = provider.readBytes(offset, 4);
 			if (Arrays.equals(signature, IntelFlashDescriptorConstants.IFD_SIGNATURE_BYTES)) {
-				Msg.debug(this, String.format("Found IFD signature at 0x%X", offset));
 				if (remainingLength <= IntelFlashDescriptorConstants.DESCRIPTOR_SIZE - 16) {
 					// Ignore binaries which lack regions other than the flash descriptor.
 					return false;
 				}
 
+				Msg.debug(this, String.format("Found IFD signature at 0x%X", offset));
 				return true;
 			}
 
@@ -90,7 +90,7 @@ public class IntelFlashFileSystem extends GFileSystemBase {
 	@Override
 	protected InputStream getData(GFile file, TaskMonitor monitor) {
 		IntelFlashRegion entry = map.get(file);
-		return entry.getDataStream();
+		return entry.getData();
 	}
 
 	@Override

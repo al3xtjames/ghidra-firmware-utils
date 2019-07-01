@@ -94,7 +94,7 @@ public class CBFSFile {
 	 *
 	 * @return an InputStream for the contents of the current file
 	 */
-	public InputStream getDataStream() throws IOException {
+	public InputStream getData() throws IOException {
 		ByteArrayInputStream dataInputStream = new ByteArrayInputStream(data);
 
 		// Extract the file if compression is used (specified in a compression attribute).

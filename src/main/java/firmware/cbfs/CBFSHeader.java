@@ -60,8 +60,8 @@ public class CBFSHeader extends CBFSFile {
 			throw new IOException("Not a valid CBFS header");
 		}
 
-		InputStreamByteProvider provider = new InputStreamByteProvider(getDataStream(),
-				getDataStream().available());
+		InputStreamByteProvider provider = new InputStreamByteProvider(getData(),
+				getData().available());
 		BinaryReader headerReader = new BinaryReader(provider, false);
 
 		signature = headerReader.readNextAsciiString(CBFSConstants.CBFS_HEADER_SIGNATURE.length());

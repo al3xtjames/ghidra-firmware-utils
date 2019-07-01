@@ -20,6 +20,7 @@ import ghidra.app.util.bin.BinaryReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Formatter;
 
 /**
@@ -64,11 +65,11 @@ public class FlashMapArea {
 	}
 
 	/**
-	 * Returns a ByteArrayInputStream for the contents of the current flash area.
+	 * Returns an InputStream for the contents of the current flash area.
 	 *
-	 * @return a ByteArrayInputStream for the contents of the current flash area
+	 * @return an InputStream for the contents of the current flash area
 	 */
-	public ByteArrayInputStream getDataStream() {
+	public InputStream getData() {
 		return new ByteArrayInputStream(data);
 	}
 

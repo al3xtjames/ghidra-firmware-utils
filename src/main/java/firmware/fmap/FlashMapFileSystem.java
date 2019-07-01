@@ -83,7 +83,7 @@ public class FlashMapFileSystem extends GFileSystemBase {
 	@Override
 	protected InputStream getData(GFile file, TaskMonitor monitor) {
 		FlashMapArea area = map.get(file);
-		return area.getDataStream();
+		return area.getData();
 	}
 
 	@Override

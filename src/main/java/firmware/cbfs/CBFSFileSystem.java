@@ -91,7 +91,7 @@ public class CBFSFileSystem extends GFileSystemBase {
 	@Override
 	protected InputStream getData(GFile file, TaskMonitor monitor) throws IOException {
 		CBFSFile cbfsFile = map.get(file);
-		return cbfsFile.getDataStream();
+		return cbfsFile.getData();
 	}
 
 	@Override

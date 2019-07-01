@@ -20,6 +20,7 @@ import ghidra.app.util.bin.BinaryReader;
 import ghidra.util.BoundedInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Formatter;
 
 /**
@@ -48,11 +49,11 @@ public class IntelFlashRegion {
 	}
 
 	/**
-	 * Returns a BoundedInputStream for the contents of the current flash region.
+	 * Returns an InputStream for the contents of the current flash region.
 	 *
-	 * @return a BoundedInputStream for the contents of the current flash region
+	 * @return an InputStream for the contents of the current flash region
 	 */
-	public BoundedInputStream getDataStream() {
+	public InputStream getData() {
 		return inputStream;
 	}
 
