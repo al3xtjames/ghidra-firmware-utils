@@ -40,8 +40,8 @@ model {
 				if (targetPlatform.operatingSystem.macOsX) {
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/darwin"
-					cCompiler.args '-mmacosx-version-min=10.6'
-					linker.args '-mmacosx-version-min=10.6'
+					cCompiler.args '-mmacosx-version-min=10.9'
+					linker.args '-mmacosx-version-min=10.9'
 				} else if (targetPlatform.operatingSystem.linux) {
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
 					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/linux"
