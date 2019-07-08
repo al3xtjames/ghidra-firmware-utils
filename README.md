@@ -17,6 +17,7 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
    Descriptor (IFD) images (shows flash regions)
  - Implements a FS loader for Coreboot Filesystem (CBFS) images (displays
    included files and handles compression)
+ - Implements a FS loader for UEFI firmware volumes (FFS parsing is still WIP)
 
 ## Planned functionality / TODO
 ### Firmware image loader
@@ -69,6 +70,8 @@ Apache 2.0, with some exceptions:
 The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
 [UEFITool][7] as a reference.
 
+The GUID database in `data/guids.csv` is taken from [UEFITool][8].
+
 [1]: https://ghidra-sre.org/
 [2]: https://summerofcode.withgoogle.com/projects/#6413737605464064
 [3]: https://github.com/danse-macabre/ida-efitools
@@ -76,3 +79,4 @@ The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
 [5]: https://github.com/tianocore/edk2/blob/2e351cbe8e190271b3716284fc1076551d005472/BaseTools/Source/C/Common/Decompress.c
 [6]: https://tukaani.org/xz/java.html
 [7]: https://github.com/LongSoft/UEFITool
+[8]: https://github.com/LongSoft/UEFITool/blob/f863caac9df1c5258e9bcc0441a695b6a3bbaf7c/common/guids.csv
