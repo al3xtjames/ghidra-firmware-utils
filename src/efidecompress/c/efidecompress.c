@@ -1068,6 +1068,86 @@ Java_firmware_common_EFIDecompressor_nativeDecompress (
     free (Sd);
     free (Buf);
     (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+    return NULL;
+  }
+
+  // Construct a Java byte array to store the decompressed image.
+  (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+  jbyteArray DecompressedImageArray = (*Env)->NewByteArray (Env, DstSize);
+  if (!DecompressedImageArray) {
+    free (Sd);
+    free (Buf);
+    return NULL;
+  }
+
+  // Copy the contents of the decompressed image buffer to the Java byte array.
+  (*Env)->SetByteArrayRegion (Env, DecompressedImageArray, 0, DstSize, Buf);
+  free (Sd);
+  free (Buf);
+  return DecompressedImageArray;
+}
+
+// JNI implementation with the following signature:
+// static byte[] TianoDecompressor.nativeDecompress(byte[] compressedImage)
+JNIEXPORT
+jbyteArray
+JNICALL
+Java_firmware_common_TianoDecompressor_nativeDecompress (
+  JNIEnv      *Env,
+  jclass      Class,
+  jbyteArray  CompressedImageArray
+  )
+{
+  // Get the contents of the compressed image.
+  jsize CompressedImageSize = (*Env)->GetArrayLength (Env, CompressedImageArray);
+  jbyte *CompressedImage = (*Env)->GetByteArrayElements (Env, CompressedImageArray, 0);
+  if (!CompressedImage) {
+    return NULL;
+  }
+
+  // Retrieve information about the compressed image.
+  size_t DstSize;
+  size_t ScratchSize;
+  if (TianoGetInfo (
+        CompressedImage,
+        CompressedImageSize,
+        &DstSize,
+        &ScratchSize
+        )
+      != RETURN_SUCCESS) {
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+    return NULL;
+  }
+
+  // Allocate memory for the uncompressed image buffer.
+  jbyte *Buf = malloc (DstSize);
+  if (!Buf) {
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+    return NULL;
+  }
+
+  // Allocate memory for the scratch data.
+  uint8_t *Sd = malloc (ScratchSize);
+  if (!Sd) {
+    free (Buf);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+    return NULL;
+  }
+
+  // Decompress the image.
+  if (TianoDecompress (
+        CompressedImage,
+        CompressedImageSize,
+        (uint8_t *) Buf,
+        DstSize,
+        Sd,
+        ScratchSize
+        )
+      != RETURN_SUCCESS) {
+    free (Sd);
+    free (Buf);
+    (*Env)->ReleaseByteArrayElements (Env, CompressedImageArray, CompressedImage, 0);
+    return NULL;
   }
 
   // Construct a Java byte array to store the decompressed image.
