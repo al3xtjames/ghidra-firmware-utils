@@ -25,6 +25,7 @@ import ghidra.program.model.data.StructureDataType;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Formatter;
 
 /**
@@ -96,13 +97,13 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 	}
 
 	/**
-	 * Returns a ByteArrayInputStream for the contents of the EFI PE32+ executable. Compressed
-	 * executables will be transparently decompressed before returning.
+	 * Returns an InputStream for the contents of the EFI PE32+ executable. Compressed executables
+	 * will be transparently decompressed before returning.
 	 *
-	 * @return a ByteArrayInputStream for the contents of the EFI PE32+ executable
+	 * @return an InputStream for the contents of the EFI PE32+ executable
 	 */
 	@Override
-	public ByteArrayInputStream getImageStream() {
+	public InputStream getImageStream() {
 		if (efiCompressionType == 1) {
 			return new ByteArrayInputStream(EFIDecompressor.decompress(efiImage));
 		} else {

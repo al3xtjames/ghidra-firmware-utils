@@ -76,7 +76,7 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		} else if (entryPointInstruction[0] == (byte) 0xE9) {
 			// JMP rel16 (relative to next instruction)
 			entryPointOffset += (short)
-					(entryPointInstruction[2] << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
+					((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF);
 			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
 		}
 

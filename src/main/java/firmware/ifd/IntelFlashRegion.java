@@ -38,7 +38,6 @@ public class IntelFlashRegion {
 	 * @param reader the specified BinaryReader
 	 * @param length the length of the flash region in bytes
 	 * @param type   the region type (see IntelFlashDescriptorConstants.FlashRegionType)
-	 * @throws IOException
 	 */
 	public IntelFlashRegion(BinaryReader reader, int length, int type) throws IOException {
 		baseAddress = (int) reader.getPointerIndex();

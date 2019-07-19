@@ -25,6 +25,7 @@ import ghidra.program.model.data.StructureDataType;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Formatter;
 
 /**
@@ -123,12 +124,12 @@ public class OptionROMHeader implements StructConverter {
 	}
 
 	/**
-	 * Returns a ByteArrayInputStream for the contents of the image. Subclasses may override this
-	 * to return an enclosed executable instead of the raw image.
+	 * Returns an InputStream for the contents of the image. Subclasses may override this to return
+	 * an enclosed executable instead of the raw image.
 	 *
-	 * @return a ByteArrayInputStream for the contents of the image
+	 * @return an InputStream for the contents of the image
 	 */
-	public ByteArrayInputStream getImageStream() {
+	public InputStream getImageStream() {
 		// For a generic option ROM with an unknown code type, just return the entire ROM as the
 		// image. This will be overridden by subclasses (UEFIOptionROMHeader, etc) to only return
 		// the executable.
