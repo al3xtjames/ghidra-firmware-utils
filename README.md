@@ -12,18 +12,18 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
  - Defines the entry point function and various header data types for legacy
    x86 option ROMs
 
-### Firmware image loader (WIP)
+### Firmware image loader
  - Implements a FS loader for Flash Map (FMAP) images and Intel Flash
    Descriptor (IFD) images (shows flash regions)
  - Implements a FS loader for Coreboot Filesystem (CBFS) images (displays
    included files and handles compression)
- - Implements a FS loader for UEFI firmware volumes (FFS parsing is still WIP)
+ - Implements a FS loader for UEFI firmware volumes and nested firmware
+   filesystem (FFS) file/FFS section parsing
 
 ## Planned functionality / TODO
 ### Firmware image loader
- - Implement FS loader for firmware images
- - Write parsers for Intel IFD (BIOS region), coreboot CBFS, and UEFI firmware
-   volumes
+ - Support for parsing extended headers in UEFI firmware volumes
+ - Support for parsing FFSv3 files
 
 ### UEFI loader
  - Write helper script to import GUIDs/etc (similar to [ida-efitools][3])
@@ -54,6 +54,18 @@ displayed, and can be imported for analysis. Legacy x86 images will be handled
 the x86 PCI Option ROM loader, and UEFI images will be handled by the PE32
 loader (compression is supported). Information for each image can be displayed
 by selecting **Get Info** in the right-click menu.
+
+### Firmware image loader
+Add a supported firmware image to a Ghidra project. The firmware image loader
+supports Intel images with a Flash Descriptor, coreboot images with a FMAP/CBFS
+layout, and UEFI firmware volumes. The **File system** import mode can be used
+to view embedded files within the specified firmware image.
+
+Note that some UEFI firmware images may store nested firmware volumes within
+freeform/raw files (or freeform/raw FFS sections). Such files can be imported
+as firmware volumes by selecting **Open File System** in the right-click menu
+for the specified freeform/raw file. If no nested firmware volume is found, an
+error message will be displayed (`No file system provider for...`).
 
 ## License
 Apache 2.0, with some exceptions:

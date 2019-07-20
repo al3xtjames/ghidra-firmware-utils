@@ -16,6 +16,8 @@
 
 package firmware.uefi_fv;
 
+import java.util.UUID;
+
 /**
  * Various UEFI Firmware Volume constants.
  */
@@ -26,12 +28,14 @@ public final class UEFIFirmwareVolumeConstants {
 	// Size of the UEFI Firmware Volume Header structure
 	public static final int UEFI_FV_HEADER_SIZE = 72;
 
+	// UEFI Firmware Volume attributes (legacy)
 	public static final class Attributes {
 		public static final int ALIGNMENT = 0x0000001F;
 		public static final int FIXED = 0x00000100;
 		public static final int MEMORY_MAPPED = 0x00000200;
 	}
 
+	// UEFI Firmware Volume attributes
 	public static final class AttributesV2 {
 		public static final int READ_DISABLED_CAP = 0x00000001;
 		public static final int READ_ENABLED_CAP = 0x00000002;
@@ -83,4 +87,7 @@ public final class UEFIFirmwareVolumeConstants {
 		public static final int ALIGNMENT_1G = 0x001E0000;
 		public static final int ALIGNMENT_2G = 0x001F0000;
 	}
+
+	public static final UUID EFI_SYSTEM_NV_DATA_FV_GUID =
+			UUID.fromString("FFF12B8D-7696-4C8B-A985-2747075B4F50");
 }

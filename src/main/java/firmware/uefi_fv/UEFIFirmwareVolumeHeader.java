@@ -18,6 +18,7 @@ package firmware.uefi_fv;
 
 import firmware.common.UUIDUtils;
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.GFile;
 import ghidra.util.Msg;
 
 import java.io.IOException;
@@ -60,7 +61,7 @@ import java.util.UUID;
  * aligned depending on the bits set in the Attributes field of the UEFI Firmware Volume header.
  * See UFSIFFSFile and UEFIFFSv3File for information regarding the FFS file header fields.
  */
-public class UEFIFirmwareVolumeHeader {
+public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	// Original header fields
 	private byte[] zeroVector;
 	private UUID fileSystemGuid;
@@ -72,49 +73,54 @@ public class UEFIFirmwareVolumeHeader {
 	private short extendedHeaderOffset;
 	private byte revision;
 
+	private long baseIndex;
+
 	/**
-	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader.
+	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader and adds it to a
+	 * specified UEFIFirmwareVolumeFileSystem.
 	 *
 	 * @param reader the specified BinaryReader
+	 * @param fs	 the specified UEFIFirmwareVolumeFileSystem
+	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public UEFIFirmwareVolumeHeader(BinaryReader reader) throws IOException {
-		long headerOffset = reader.getPointerIndex();
+	public UEFIFirmwareVolumeHeader(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
+			GFile parent, boolean nested) throws IOException {
+		baseIndex = reader.getPointerIndex();
 		zeroVector = reader.readNextByteArray(16);
 
-		// Read the file system GUID.
 		fileSystemGuid = UUIDUtils.fromBinaryReader(reader);
-
 		size = reader.readNextLong();
+		if (size <= UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE) {
+			throw new IOException("Not a valid UEFI FV header");
+		}
+
 		signature = reader.readNextAsciiString(
 				UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE.length());
 		if (!signature.equals(UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE)) {
 			throw new IOException("Not a valid UEFI FV Header");
 		}
 
-		Msg.debug(this, "File system GUID = " + fileSystemGuid.toString());
-		Msg.debug(this, String.format("Firmware volume size = 0x%X", size));
-
 		attributes = reader.readNextInt();
 		headerSize = reader.readNextShort();
-		Msg.debug(this, String.format("Firmware volume header size = 0x%X", headerSize));
 		checksum = reader.readNextShort();
 		extendedHeaderOffset = reader.readNextShort();
 
 		// Skip the Reserved field.
 		reader.setPointerIndex(reader.getPointerIndex() + 1);
-
 		revision = reader.readNextByte();
-		Msg.debug(this, "Firmware volume revision = " + revision);
 
 		// Skip the FvBlockMap field.
 		reader.setPointerIndex(reader.getPointerIndex() + 16);
 
 		if (revision == 2 && extendedHeaderOffset > 0) {
-			// TODO: Handle extended headers.
+			// The extended header structure consists of a EFI GUID followed by the size of the
+			// header (stored as u32).
+			reader.setPointerIndex(baseIndex + extendedHeaderOffset + 16);
+			int extendedHeaderSize = reader.readNextInt();
+			reader.setPointerIndex(baseIndex + extendedHeaderOffset + extendedHeaderSize);
 		}
 
 		// Retrieve the current volume's alignment.
-		long offset = reader.getPointerIndex();
 		int alignment = 8;
 		if (revision == 1) {
 			alignment = 1 << ((attributes & UEFIFirmwareVolumeConstants.Attributes.ALIGNMENT));
@@ -128,8 +134,38 @@ public class UEFIFirmwareVolumeHeader {
 			alignment = 8;
 		}
 
-		// TODO: Read the files in the current firmware volume.
-		reader.setPointerIndex(offset - headerSize + size);
+		// Add this firmware volume as a subdirectory in the current FS.
+		GFile fileImpl = fs.addFile(parent, this, true);
+
+		// Ignore NVRAM volumes - add the contents as a raw file, and skip FFS file parsing.
+		if (fileSystemGuid.equals(UEFIFirmwareVolumeConstants.EFI_SYSTEM_NV_DATA_FV_GUID)) {
+			new FFSRawFile(reader, (int) size - UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE,
+					fs, fileImpl);
+		} else {
+			// Read the files in the current firmware volume.
+			while (reader.getPointerIndex() < baseIndex + size) {
+				if (nested) {
+					// Nested firmware volumes are also aligned to an 8 byte boundary; however,
+					// this is relative to the start of the nested firmware volume.
+					reader.setPointerIndex(reader.getPointerIndex() - baseIndex);
+					reader.align(8);
+					reader.setPointerIndex(reader.getPointerIndex() + baseIndex);
+				} else {
+					// FFS files within a firmware volume are aligned to an 8 byte boundary.
+					reader.align(8);
+				}
+
+				long originalIndex = reader.getPointerIndex();
+				try {
+					UEFIFFSFile file = new UEFIFFSFile(reader, fs, fileImpl);
+				} catch (IOException e) {
+					break;
+				}
+			}
+		}
+
+		// Seek over the entire firmware volume.
+		reader.setPointerIndex(baseIndex + size);
 	}
 
 	/**
@@ -142,6 +178,15 @@ public class UEFIFirmwareVolumeHeader {
 	}
 
 	/**
+	 * Returns the name of the current firmware volume.
+	 *
+	 * @return the name of the current firmware volume
+	 */
+	public String getName() {
+		return UUIDUtils.getName(fileSystemGuid);
+	}
+
+	/**
 	 * Returns the length of the current firmware volume.
 	 *
 	 * @return the length of the current firmware volume
@@ -150,9 +195,15 @@ public class UEFIFirmwareVolumeHeader {
 		return size;
 	}
 
+	/**
+	 * Returns a string representation of the current firmware volume.
+	 *
+	 * @return a string representation of the current firmware volume
+	 */
 	@Override
 	public String toString() {
 		Formatter formatter = new Formatter();
+		formatter.format("Firmware volume base: 0x%X\n", baseIndex);
 		formatter.format("Firmware volume FS GUID: %s\n", fileSystemGuid.toString());
 		formatter.format("Firmware volume size: 0x%X\n", size);
 		formatter.format("Firmware volume attributes: 0x%X\n", attributes);
