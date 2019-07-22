@@ -100,13 +100,20 @@ public class FFSGUIDDefinedSection extends FFSSection {
 				reader.getByteProvider().getInputStream(reader.getPointerIndex()),
 				length());
 
-			LZMACompressorInputStream inputStream = new LZMACompressorInputStream(boundedStream);
-			uncompressedData = inputStream.readAllBytes();
+			try {
+				LZMACompressorInputStream inputStream = new LZMACompressorInputStream(boundedStream);
+				uncompressedData = inputStream.readAllBytes();
 
-			// Parse the uncompressed section.
-			BinaryReader sectionReader = new BinaryReader(
-				new ByteArrayProvider(uncompressedData), true);
-			parseNestedSections(sectionReader, uncompressedData.length, fs, fileImpl);
+				// Parse the uncompressed section.
+				BinaryReader sectionReader = new BinaryReader(
+					new ByteArrayProvider(uncompressedData), true);
+				parseNestedSections(sectionReader, uncompressedData.length, fs, fileImpl);
+			} catch (IOException e) {
+				Msg.error(this, "Failed to extract LZMA compressed section: " +
+						e.getMessage());
+				reader.setPointerIndex(baseIndex + getTotalLength());
+				return;
+			}
 		} else {
 			// Parse the data in the current GUID-defined section.
 			parseNestedSections(reader, length(), fs, fileImpl);

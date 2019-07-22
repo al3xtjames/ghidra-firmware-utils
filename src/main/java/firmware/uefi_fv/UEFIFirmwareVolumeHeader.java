@@ -57,6 +57,17 @@ import java.util.UUID;
  *   | u32  |    4 | Block Size       |
  *   +------+------+------------------+
  *
+ * The Extended Header Offset field is relative to the start of firmware volume header; it has the
+ * following structure:
+ *
+ *   UEFI Firmware Volume Extended Header
+ *   +------------+------+----------------------+
+ *   | Type       | Size | Description          |
+ *   +------------+------+----------------------+
+ *   | efi_guid_t |   16 | Firmware Volume Name |
+ *   | u32        |    4 | Extended Header Size |
+ *   +------------+------+----------------------+
+ *
  * Each firmware volume contains a number of UEFI Firmware File System (FFS) files, which may be
  * aligned depending on the bits set in the Attributes field of the UEFI Firmware Volume header.
  * See UFSIFFSFile and UEFIFFSv3File for information regarding the FFS file header fields.
@@ -72,6 +83,10 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	private short checksum;
 	private short extendedHeaderOffset;
 	private byte revision;
+
+	// Extended header fields
+	private UUID fvName;
+	private int extendedHeaderSize;
 
 	private long baseIndex;
 
@@ -90,7 +105,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 
 		fileSystemGuid = UUIDUtils.fromBinaryReader(reader);
 		size = reader.readNextLong();
-		if (size <= UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE) {
+		if (size < UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE) {
 			throw new IOException("Not a valid UEFI FV header");
 		}
 
@@ -112,11 +127,11 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 		// Skip the FvBlockMap field.
 		reader.setPointerIndex(reader.getPointerIndex() + 16);
 
+		// Read the extended header fields (if present).
 		if (revision == 2 && extendedHeaderOffset > 0) {
-			// The extended header structure consists of a EFI GUID followed by the size of the
-			// header (stored as u32).
-			reader.setPointerIndex(baseIndex + extendedHeaderOffset + 16);
-			int extendedHeaderSize = reader.readNextInt();
+			reader.setPointerIndex(baseIndex + extendedHeaderOffset);
+			fvName = UUIDUtils.fromBinaryReader(reader);
+			extendedHeaderSize = reader.readNextInt();
 			reader.setPointerIndex(baseIndex + extendedHeaderOffset + extendedHeaderSize);
 		}
 
@@ -155,7 +170,6 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 					reader.align(8);
 				}
 
-				long originalIndex = reader.getPointerIndex();
 				try {
 					UEFIFFSFile file = new UEFIFFSFile(reader, fs, fileImpl);
 				} catch (IOException e) {
@@ -169,20 +183,15 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	}
 
 	/**
-	 * Returns the file system GUID for the current firmware volume.
-	 *
-	 * @return the file system GUID for the current firmware volume
-	 */
-	public UUID getGUID() {
-		return fileSystemGuid;
-	}
-
-	/**
 	 * Returns the name of the current firmware volume.
 	 *
 	 * @return the name of the current firmware volume
 	 */
 	public String getName() {
+		if (fvName != null) {
+			return UUIDUtils.getName(fvName);
+		}
+
 		return UUIDUtils.getName(fileSystemGuid);
 	}
 
@@ -209,6 +218,11 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 		formatter.format("Firmware volume attributes: 0x%X\n", attributes);
 		formatter.format("Firmware volume header size: 0x%X\n", headerSize);
 		formatter.format("Firmware volume revision: %d", revision);
+		if (revision == 2 && extendedHeaderOffset > 0) {
+			formatter.format("\nFirmware volume name GUID: %s\n", fvName.toString());
+			formatter.format("Firmware volume extended header size: 0x%X", extendedHeaderSize);
+		}
+
 		return formatter.toString();
 	}
 }
