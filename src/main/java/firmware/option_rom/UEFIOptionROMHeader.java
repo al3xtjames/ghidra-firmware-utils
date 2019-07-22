@@ -135,7 +135,7 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 				OptionROMConstants.EFIImageMachineType.toString(efiMachineType));
 		formatter.format("EFI Image Compression: %b\n", efiCompressionType == 1);
 		formatter.format("EFI Image Offset: 0x%X\n", efiImageOffset);
-		formatter.format("%s\n", super.toString());
+		formatter.format("%s", super.toString());
 		return formatter.toString();
 	}
 }

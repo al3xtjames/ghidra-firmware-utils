@@ -35,21 +35,16 @@ public class OptionROMHeaderFactory {
 	 * @return       the parsed OptionROMHeader
 	 */
 	public static OptionROMHeader parseOptionROM(BinaryReader reader) throws IOException {
-		short signature = reader.readNextShort();
+		short signature = reader.peekNextShort();
 		if (signature != OptionROMConstants.ROM_SIGNATURE) {
 			throw new IOException("Not a valid PCI option ROM header");
 		}
 
 		// Read the PCI data structure offset field in the ROM header.
-		reader.setPointerIndex(0x18);
-		short pcirOffset = reader.readNextShort();
-
-		// Read the code type field in the PCI data structure.
-		reader.setPointerIndex(pcirOffset + 0x14);
-		byte codeType = reader.readNextByte();
+		short pcirOffset = reader.readShort(0x18);
 
 		// Construct the correct OptionROMHeader based off the code type.
-		reader.setPointerIndex(0);
+		byte codeType = reader.readByte(pcirOffset + 0x14);
 		switch (codeType) {
 			case OptionROMConstants.CodeType.PC_AT_COMPATIBLE:
 				return new LegacyOptionROMHeader(reader);

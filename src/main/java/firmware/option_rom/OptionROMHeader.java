@@ -167,9 +167,9 @@ public class OptionROMHeader implements StructConverter {
 	public String toString() {
 		Formatter formatter = new Formatter();
 		formatter.format("PCI Data Structure Offset: 0x%X\n", pcirOffset);
-		formatter.format("%s\n", pcirHeader.toString());
+		formatter.format("%s", pcirHeader.toString());
 		if (deviceList != null) {
-			formatter.format("%s\n", deviceList.toString());
+			formatter.format("\n%s", deviceList.toString());
 		}
 
 		return formatter.toString();

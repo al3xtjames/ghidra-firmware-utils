@@ -109,7 +109,7 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		formatter.format("Entry Point Instruction: %02X %02X %02X\n", entryPointInstruction[0],
 				entryPointInstruction[1], entryPointInstruction[2]);
 		formatter.format("Decoded Entry Point Address: 0x%X\n", entryPointOffset);
-		formatter.format("%s\n", super.toString());
+		formatter.format("%s", super.toString());
 		return formatter.toString();
 	}
 }
