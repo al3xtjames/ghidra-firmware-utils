@@ -157,6 +157,7 @@ public class FFSGUIDDefinedSection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current GUID-defined section
 	 */
+	@Override
 	public InputStream getData() {
 		return null;
 	}

@@ -61,6 +61,7 @@ public class FFSGenericSection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current FFS section
 	 */
+	@Override
 	public InputStream getData() {
 		return new ByteArrayInputStream(data);
 	}

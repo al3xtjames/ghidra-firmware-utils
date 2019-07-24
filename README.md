@@ -20,9 +20,11 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
  - Implements a FS loader for UEFI firmware volumes and nested firmware
    filesystem (FFS) file/FFS section parsing
 
+### Terse Executable (TE) loader
+ - Implements a binary loader for TE binaries (frequently used in UEFI PI)
+
 ## Planned functionality / TODO
 ### Firmware image loader
- - Support for parsing extended headers in UEFI firmware volumes
  - Support for parsing FFSv3 files
 
 ### UEFI loader

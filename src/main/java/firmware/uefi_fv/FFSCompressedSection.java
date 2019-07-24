@@ -130,6 +130,7 @@ public class FFSCompressedSection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current compressed section
 	 */
+	@Override
 	public InputStream getData() {
 		return null;
 	}
