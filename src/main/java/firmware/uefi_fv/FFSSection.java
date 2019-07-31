@@ -26,12 +26,13 @@ import java.util.Formatter;
  * Parser for the common FFS section header, which has the following fields:
  *
  *   Common UEFI FFS Section Header
- *   +------+------+-------------+
- *   | Type | Size | Description |
- *   +------+------+-------------+
- *   | u24  |    3 | Size        |
- *   | u8   |    1 | Type        |
- *   +------+------+-------------+
+ *   +------+------+----------------------------------------+
+ *   | Type | Size | Description                            |
+ *   +------+------+----------------------------------------+
+ *   | u24  |    3 | Size (0xFFFFFF for FFSv3 large files)  |
+ *   | u8   |    1 | Type                                   |
+ *   | u32  |    4 | Extended Size (FFSv3 large files only) |
+ *   +------+------+----------------------------------------+
  *
  * Subclasses will parse additional fields for specific FFS section types.
  */
@@ -41,6 +42,7 @@ public abstract class FFSSection implements UEFIFile {
 	private byte type;
 
 	private long baseIndex;
+	private boolean hasExtendedSize;
 
 	/**
 	 * Constructs a UEFIFFSFile from a specified BinaryReader.
@@ -50,9 +52,15 @@ public abstract class FFSSection implements UEFIFile {
 	public FFSSection(BinaryReader reader) throws IOException {
 		baseIndex = reader.getPointerIndex();
 		byte[] sizeBytes = reader.readNextByteArray(3);
-		size = ((sizeBytes[2] & 0xFF) << 16 | (sizeBytes[1] & 0xFF) << 8 | sizeBytes[0] & 0xFF) -
-				UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+		size = ((sizeBytes[2] & 0xFF) << 16 | (sizeBytes[1] & 0xFF) << 8 | sizeBytes[0] & 0xFF);
 		type = reader.readNextByte();
+
+		if (size == 0xFFFFFF) {
+			hasExtendedSize = true;
+			size = reader.readNextInt() - 4;
+		}
+
+		size -= UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
 	}
 
 	/**
@@ -69,7 +77,12 @@ public abstract class FFSSection implements UEFIFile {
 	 * @return the length of the header for the current FFS section
 	 */
 	public int getHeaderLength() {
-		return UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+		int headerLength = UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+		if (hasExtendedSize) {
+			headerLength += 4;
+		}
+
+		return headerLength;
 	}
 
 	/**

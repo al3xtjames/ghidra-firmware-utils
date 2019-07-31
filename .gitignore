@@ -9,6 +9,7 @@ gradle/
 .project
 .pydevproject
 .classpath
+gradle.properties
 *.dll
 *.dylib
 *.so

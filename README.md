@@ -24,20 +24,24 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
  - Implements a binary loader for TE binaries (frequently used in UEFI PI)
 
 ## Planned functionality / TODO
-### Firmware image loader
- - Support for parsing FFSv3 files
-
 ### UEFI loader
  - Write helper script to import GUIDs/etc (similar to [ida-efitools][3])
 
 ## Building & Installation
 
 Ghidra's standard Gradle build system is used. Set the `GHIDRA_INSTALL_DIR`
-environment variable before building:
+environment variable before building, or set it as a Gradle property (useful
+for building in an IDE):
 
+### Environment variable
 ```bash
 $ export GHIDRA_INSTALL_DIR="/path/to/ghidra"
 $ gradle
+```
+
+### Gradle property
+```bash
+echo GHIDRA_INSTALL_DIR="/path/to/ghidra" > gradle.properties
 ```
 
 The module ZIP will be output to `dist/`. Use **File > Install Extensions** and

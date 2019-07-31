@@ -29,17 +29,21 @@ import java.util.UUID;
  * Parser for UEFI Firmware File System (FFS) files, which have the following header:
  *
  *   UEFI FFS File Header
- *   +------------+------+-----------------+
- *   | Type       | Size | Description     |
- *   +------------+------+-----------------+
- *   | efi_guid_t |   16 | File GUID       |
- *   | u8         |    1 | Header Checksum |
- *   | u8         |    1 | File Checksum   |
- *   | u8         |    1 | Type            |
- *   | u8         |    1 | Attributes      |
- *   | u24        |    3 | Size            |
- *   | u8         |    1 | State           |
- *   +------------+------+-----------------+
+ *   +------------+------+----------------------------------------+
+ *   | Type       | Size | Description                            |
+ *   +------------+------+----------------------------------------+
+ *   | efi_guid_t |   16 | File GUID                              |
+ *   | u8         |    1 | Header Checksum                        |
+ *   | u8         |    1 | File Checksum                          |
+ *   | u8         |    1 | Type                                   |
+ *   | u8         |    1 | Attributes                             |
+ *   | u24        |    3 | Size (0xFFFFFF for FFSv3 large files)  |
+ *   | u8         |    1 | State                                  |
+ *   | u64        |    8 | Extended Size (FFSv3 large files only) |
+ *   +------------+------+----------------------------------------+
+ *
+ * FFSv3 files can be identified by checking if FFS_ATTRIB_LARGE_FILE (0x01) is set in the
+ * Attributes field.
  *
  * Following the header, FFS files may contain multiple sections (this does not apply for raw FFS
  * files). See FFSSection for information regarding the common FFS section header, as well as
@@ -52,7 +56,7 @@ public class UEFIFFSFile implements UEFIFile {
 	private byte fileChecksum;
 	private byte type;
 	private byte attributes;
-	private int size;
+	private long size;
 	private byte state;
 
 	private long baseIndex;
@@ -77,7 +81,7 @@ public class UEFIFFSFile implements UEFIFile {
 
 		byte[] sizeBytes = reader.readNextByteArray(3);
 		size = ((sizeBytes[2] & 0xFF) << 16 | (sizeBytes[1] & 0xFF) << 8 | sizeBytes[0] & 0xFF);
-		if (size <= UEFIFFSConstants.FFS_HEADER_SIZE) {
+		if (size < UEFIFFSConstants.FFS_HEADER_SIZE) {
 			throw new IOException("Not a valid FFS file");
 		}
 
@@ -96,6 +100,11 @@ public class UEFIFFSFile implements UEFIFile {
 			throw new IOException("Not a valid FFS file");
 		}
 
+		// Read the extended size for FFSv3 files.
+		if ((attributes & UEFIFFSConstants.Attributes.LARGE_FILE) != 0) {
+			size = reader.readNextLong();
+		}
+
 		// Check if there is a UI section containing a name for this file.
 		// This has to be done before the GFile for this FFS file is created, as the GFile's name
 		// cannot be changed after it is constructed.
@@ -109,8 +118,10 @@ public class UEFIFFSFile implements UEFIFile {
 					break;
 				}
 
-				remainingLength -= section.getTotalLength();
+				long unalignedIndex = reader.getPointerIndex();
 				reader.align(4);
+				long alignedIndex = reader.getPointerIndex();
+				remainingLength -= section.getTotalLength() + (alignedIndex - unalignedIndex);
 			}
 
 			reader.setPointerIndex(currentIndex);
@@ -126,7 +137,8 @@ public class UEFIFFSFile implements UEFIFile {
 				new UEFIFirmwareVolumeHeader(reader, fs, fileImpl, true);
 			} catch (IOException e) {
 				reader.setPointerIndex(currentIndex);
-				new FFSRawFile(reader, size - UEFIFFSConstants.FFS_HEADER_SIZE, fs, fileImpl);
+				new FFSRawFile(reader, (int) size - UEFIFFSConstants.FFS_HEADER_SIZE, fs,
+						fileImpl);
 			}
 		} else {
 			long remainingLength = size - UEFIFFSConstants.FFS_HEADER_SIZE;
