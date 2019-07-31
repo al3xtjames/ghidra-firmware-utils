@@ -52,6 +52,16 @@ public class UUIDUtils {
 	private UUIDUtils() {}
 
 	/**
+	 * Checks if the specified UUID is present in the UUID database.
+	 *
+	 * @param  uuid the specified UUID
+	 * @return      if a UUID is present in the UUID map
+	 */
+	public static boolean dbContains(UUID uuid) {
+		return guidMap.containsKey(uuid);
+	}
+
+	/**
 	 * Constructs a UUID from a specified BinaryReader.
 	 *
 	 * @param reader the specified BinaryReader

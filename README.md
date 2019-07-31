@@ -23,8 +23,13 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
 ### Terse Executable (TE) loader
  - Implements a binary loader for TE binaries (frequently used in UEFI PI)
 
+### UEFI helper script
+ - Includes data type libraries for base UEFI types (taken from EDK2 MdePkg)
+ - Fixes the signature of the entry point function
+ - Defines known GUIDs in the binary's .data segment
+
 ## Planned functionality / TODO
-### UEFI loader
+### UEFI helper script
  - Write helper script to import GUIDs/etc (similar to [ida-efitools][3])
 
 ## Building & Installation
@@ -73,6 +78,13 @@ as firmware volumes by selecting **Open File System** in the right-click menu
 for the specified freeform/raw file. If no nested firmware volume is found, an
 error message will be displayed (`No file system provider for...`).
 
+### UEFI helper script
+The helper script is included in the plugin's ghidra_scripts directory, which
+should be automatically added to the list of script directories in Ghidra.
+
+Run the UEFI helper script by selecting UEFIHelper.java in the Script Manager
+window (accessed from **Window -> Script Manager**).
+
 ## License
 Apache 2.0, with some exceptions:
 
@@ -90,6 +102,13 @@ The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
 
 The GUID database in `data/guids.csv` is taken from [UEFITool][8].
 
+The UEFI data type libraries in `data/uefi_*.gdt` were generated from
+`data/uefi.prf`, which is taken from [a Ghidra pull request by wrffrz][9].
+These data type libraries use headers from [EDK2 MdePkg][10].
+
+[GhidraVitaLoader by xerpi][11] was used as a reference for some parts of the
+UEFI helper script.
+
 [1]: https://ghidra-sre.org/
 [2]: https://summerofcode.withgoogle.com/projects/#6413737605464064
 [3]: https://github.com/danse-macabre/ida-efitools
@@ -98,3 +117,6 @@ The GUID database in `data/guids.csv` is taken from [UEFITool][8].
 [6]: https://tukaani.org/xz/java.html
 [7]: https://github.com/LongSoft/UEFITool
 [8]: https://github.com/LongSoft/UEFITool/blob/f863caac9df1c5258e9bcc0441a695b6a3bbaf7c/common/guids.csv
+[9]: https://github.com/NationalSecurityAgency/ghidra/pull/501#issuecomment-498374810
+[10]: https://github.com/tianocore/edk2/tree/d21e5dbbbf11589113d39619b3e01eb1e8966819/MdePkg/Include
+[11]: https://github.com/xerpi/GhidraVitaLoader

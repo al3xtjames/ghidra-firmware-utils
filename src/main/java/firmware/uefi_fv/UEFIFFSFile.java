@@ -95,8 +95,8 @@ public class UEFIFFSFile implements UEFIFile {
 		}
 
 		// Ignore obviously invalid sections (free space).
-		if (nameGuid.toString().equals("ffffffff-ffff-ffff-ffff-ffffffffffff") ||
-			nameGuid.toString().equals("00000000-0000-0000-0000-000000000000")) {
+		if (nameGuid.equals(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff")) ||
+			nameGuid.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
 			throw new IOException("Not a valid FFS file");
 		}
 
