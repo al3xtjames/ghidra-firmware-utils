@@ -85,6 +85,12 @@ should be automatically added to the list of script directories in Ghidra.
 Run the UEFI helper script by selecting UEFIHelper.java in the Script Manager
 window (accessed from **Window -> Script Manager**).
 
+To modify the UEFI data type library, modify the PRF template in
+`data/gen_prf.sh` as necessary and generate new PRF files. Open the generated
+PRF file in **File -> Parse C Source**. Build the updated data type library
+by selecting **Parse to File...**. Overwrite the original data type libraries
+in `data` and rebuild the plugin.
+
 ## License
 Apache 2.0, with some exceptions:
 
@@ -102,9 +108,10 @@ The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
 
 The GUID database in `data/guids.csv` is taken from [UEFITool][8].
 
-The UEFI data type libraries in `data/uefi_*.gdt` were generated from
-`data/uefi.prf`, which is taken from [a Ghidra pull request by wrffrz][9].
-These data type libraries use headers from [EDK2 MdePkg][10].
+The UEFI data type libraries in `data/uefi_*.gdt` were generated with
+`data/gen_prf.sh`, which is partially based off the UEFI parser definition
+from [a Ghidra pull request by wrffrz][9]. These data type libraries use
+headers from [EDK2 MdePkg][10].
 
 [GhidraVitaLoader by xerpi][11] was used as a reference for some parts of the
 UEFI helper script.
