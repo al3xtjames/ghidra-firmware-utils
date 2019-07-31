@@ -147,6 +147,15 @@ public class TerseExecutableHeader implements StructConverter {
 		return sectionHeaders;
 	}
 
+	/**
+	 * Returns the subsystem in the current TE header.
+	 *
+	 * @return the subsystem in the current TE header.
+	 */
+	public short getSubsystem() {
+		return subsystem;
+	}
+
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("efi_image_te_hdr_t", 0);

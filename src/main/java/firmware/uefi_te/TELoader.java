@@ -20,6 +20,7 @@ import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.bin.format.pe.MachineConstants;
+import ghidra.app.util.bin.format.pe.PeSubsystem;
 import ghidra.app.util.importer.MemoryConflictHandler;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
@@ -43,6 +44,9 @@ import java.util.List;
  * used in the UEFI PI stage.
  */
 public class TELoader extends AbstractLibrarySupportLoader {
+	public static final String HEADERS = "Headers";
+	public static final String TE_NAME = "Terse Executable (TE)";
+
 	@Override
 	public Collection<LoadSpec> findSupportedLoadSpecs(ByteProvider provider) {
 		ArrayList<LoadSpec> loadSpecs = new ArrayList<>();
@@ -80,7 +84,7 @@ public class TELoader extends AbstractLibrarySupportLoader {
 
 		try {
 			// Create a segment for the TE header and section headers.
-			api.createMemoryBlock("Headers", api.toAddr(
+			api.createMemoryBlock(HEADERS, api.toAddr(
 					teHeader.getImageBase() + teHeader.getHeaderOffset()), inputStream,
 					TerseExecutableConstants.TE_HEADER_SIZE + teHeader.getNumSections() *
 					TerseExecutableConstants.SECTION_HEADER_SIZE, false);
@@ -114,6 +118,12 @@ public class TELoader extends AbstractLibrarySupportLoader {
 						sectionHeader.getVirtualSize()));
 			}
 
+			// Set the UEFI property if this a UEFI binary.
+			if (teHeader.getSubsystem() >= PeSubsystem.IMAGE_SUBSYSTEM_EFI_APPLICATION.ordinal() &&
+				teHeader.getSubsystem() <= PeSubsystem.IMAGE_SUBSYSTEM_EFI_ROM.ordinal()) {
+				program.getOptions(Program.PROGRAM_INFO).setBoolean("UEFI", true);
+			}
+
 			// Define the entry point function.
 			Address entryPoint = api.toAddr(teHeader.getImageBase() + teHeader.getEntryPointAddress());
 			api.addEntryPoint(entryPoint);
@@ -125,6 +135,6 @@ public class TELoader extends AbstractLibrarySupportLoader {
 
 	@Override
 	public String getName() {
-		return "Terse Executable (TE)";
+		return TE_NAME;
 	}
 }
