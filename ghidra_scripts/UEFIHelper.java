@@ -244,7 +244,7 @@ public class UEFIHelper extends GhidraScript {
 			}
 
 			ByteArrayProvider provider = new ByteArrayProvider(mem);
-			PortableExecutable pe = PortableExecutable.createPortableExecutable​(
+			PortableExecutable pe = PortableExecutable.createPortableExecutable(
 					RethrowContinuesFactory.INSTANCE, provider,
 					PortableExecutable.SectionLayout.FILE);
 			machine = pe.getNTHeader().getFileHeader().getMachine();
