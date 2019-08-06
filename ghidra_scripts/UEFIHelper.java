@@ -19,11 +19,14 @@ import firmware.common.UUIDUtils;
 import firmware.uefi_te.TELoader;
 import firmware.uefi_te.TerseExecutableHeader;
 import generic.continues.RethrowContinuesFactory;
+import ghidra.app.decompiler.*;
 import ghidra.app.plugin.core.datamgr.archive.DuplicateIdException;
 import ghidra.app.script.GhidraScript;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.app.util.bin.format.FactoryBundledWithBinaryReader;
 import ghidra.app.util.bin.format.pe.MachineConstants;
+import ghidra.app.util.bin.format.pe.NTHeader;
 import ghidra.app.util.bin.format.pe.PeSubsystem;
 import ghidra.app.util.bin.format.pe.PortableExecutable;
 import ghidra.app.util.opinion.PeLoader;
@@ -33,17 +36,13 @@ import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.DataTypeManager;
 import ghidra.program.model.data.FunctionDefinition;
 import ghidra.program.model.data.ParameterDefinition;
-import ghidra.program.model.listing.Data;
-import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.*;
 import ghidra.program.model.listing.Function.FunctionUpdateType;
-import ghidra.program.model.listing.ParameterImpl;
-import ghidra.program.model.listing.ReturnParameterImpl;
 import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.Msg;
 import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.exception.InvalidInputException;
-import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -230,38 +229,33 @@ public class UEFIHelper extends GhidraScript {
 		int subsystem;
 		Address entryPointAddress = currentProgram.getImageBase();
 		if (currentProgram.getExecutableFormat().equals(PeLoader.PE_NAME)) {
+			// Parse the PE headers.
+			MemoryBlock peBlock = currentProgram.getMemory().getBlock(PeLoader.HEADERS);
+			byte[] blockBytes = new byte[(int) peBlock.getSize()];
+			peBlock.getBytes(peBlock.getStart(), blockBytes);
+			FactoryBundledWithBinaryReader reader = new FactoryBundledWithBinaryReader(
+					RethrowContinuesFactory.INSTANCE, new ByteArrayProvider(blockBytes), true);
+			int ntHeaderOffset = reader.readInt(0x3C);
+			NTHeader ntHeader = NTHeader.createNTHeader(reader, ntHeaderOffset,
+					PortableExecutable.SectionLayout.FILE, false, false);
 			println("Loaded Portable Executable");
 
-			// PortableExecutable.createPortableExecutable requires a ByteProvider with the
-			// complete contents of the PE binary. Concatenate all of the memory blocks to obtain
-			// the entire PE binary.
-			byte[] mem = null;
-			MemoryBlock[] peBlocks = currentProgram.getMemory().getBlocks();
-			for (MemoryBlock block : peBlocks) {
-				byte[] blockBytes = new byte[(int) block.getSize()];
-				block.getBytes(block.getStart(), blockBytes);
-				mem = ArrayUtils.addAll(mem, blockBytes);
-			}
-
-			ByteArrayProvider provider = new ByteArrayProvider(mem);
-			PortableExecutable pe = PortableExecutable.createPortableExecutable(
-					RethrowContinuesFactory.INSTANCE, provider,
-					PortableExecutable.SectionLayout.FILE);
-			machine = pe.getNTHeader().getFileHeader().getMachine();
-			subsystem = pe.getNTHeader().getOptionalHeader().getSubsystem();
+			machine = ntHeader.getFileHeader().getMachine();
+			subsystem = ntHeader.getOptionalHeader().getSubsystem();
 			entryPointAddress = entryPointAddress.add(
-					pe.getNTHeader().getOptionalHeader().getAddressOfEntryPoint());
+					ntHeader.getOptionalHeader().getAddressOfEntryPoint());
 		} else if (currentProgram.getExecutableFormat().equals(TELoader.TE_NAME)) {
-			println("Loaded Terse Executable");
-
+			// Parse the TE header.
 			MemoryBlock teBlock = currentProgram.getMemory().getBlock(TELoader.HEADERS);
 			byte[] blockBytes = new byte[(int) teBlock.getSize()];
 			teBlock.getBytes(teBlock.getStart(), blockBytes);
 			BinaryReader reader = new BinaryReader(new ByteArrayProvider(blockBytes), true);
-			TerseExecutableHeader te = new TerseExecutableHeader(reader);
-			machine = te.getMachineType();
-			subsystem = te.getSubsystem();
-			entryPointAddress = entryPointAddress.add(te.getEntryPointAddress());
+			TerseExecutableHeader teHeader = new TerseExecutableHeader(reader);
+			println("Loaded Terse Executable");
+
+			machine = teHeader.getMachineType();
+			subsystem = teHeader.getSubsystem();
+			entryPointAddress = entryPointAddress.add(teHeader.getEntryPointAddress());
 		} else {
 			Msg.showError(this, null, "UEFIHelper", "Current program is not a PE/TE binary (" +
 					currentProgram.getExecutableFormat() + ')');
