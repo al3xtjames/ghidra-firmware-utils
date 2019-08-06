@@ -202,7 +202,7 @@ public class UEFIHelper extends GhidraScript {
 
 		// There may be undefined GUIDs present in the undefined data between the GUIDs we just
 		// defined. Apply the EFI_GUID type to this undefined data.
-		if (firstGuidAddress != null) {
+		if (false && firstGuidAddress != null) {
 			int unknownGuidNumber = 1;
 			for (Address address = firstGuidAddress;
 				 address.getUnsignedOffset() < lastGuidAddress.getUnsignedOffset();
