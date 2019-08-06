@@ -134,6 +134,11 @@ public class UEFIHelper extends GhidraScript {
 	private void defineEntryPoint(Address entryPointAddress) throws DuplicateNameException,
 			InvalidInputException {
 		Function entryPoint = getFunctionAt(entryPointAddress);
+		if (entryPoint == null) {
+			// Create the entry point function if it wasn't already defined.
+			entryPoint = createFunction(entryPointAddress, "_ModuleEntryPoint");
+		}
+
 		println("Found entry point function at 0x" + entryPointAddress.toString().toUpperCase());
 
 		// TODO: Pick correct entry point signature based off module type (PEI vs DXE, etc)
