@@ -32,13 +32,12 @@ import ghidra.app.util.bin.format.pe.PortableExecutable;
 import ghidra.app.util.opinion.PeLoader;
 import ghidra.app.services.DataTypeManagerService;
 import ghidra.program.model.address.Address;
-import ghidra.program.model.data.DataType;
-import ghidra.program.model.data.DataTypeManager;
-import ghidra.program.model.data.FunctionDefinition;
-import ghidra.program.model.data.ParameterDefinition;
+import ghidra.program.model.data.*;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.listing.Function.FunctionUpdateType;
 import ghidra.program.model.mem.MemoryBlock;
+import ghidra.program.model.pcode.HighGlobal;
+import ghidra.program.model.pcode.HighVariable;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.Msg;
 import ghidra.util.exception.DuplicateNameException;
@@ -110,7 +109,7 @@ public class UEFIHelper extends GhidraScript {
 	 *
 	 * @param address  the specified Address
 	 * @param dataType the specified DataType
-	 * @param name     the name to use for the data type's label
+	 * @param name     an optional name to use for the data type's label
 	 */
 	private void defineData(Address address, DataType dataType, String name) throws Exception {
 		// Remove any existing data definitions that would overlap with this definition.
@@ -123,7 +122,82 @@ public class UEFIHelper extends GhidraScript {
 
 		// Apply the data type definition and create a label.
 		createData(address, dataType);
-		createLabel(address, name, true);
+		if (name != null) {
+			createLabel(address, name, true);
+		}
+	}
+
+	/**
+	 * Searches for assignment statements to global variables and propagates the source data type
+	 * to the global variable.
+	 *
+	 * @param root the root ClangTokenGroup to search in
+	 */
+	private void propagateGlobalTypes(ClangTokenGroup root) throws Exception {
+		for (int i = 0; i < root.numChildren(); i++) {
+			ClangNode childNode = root.Child(i);
+			if (childNode instanceof ClangTokenGroup) {
+				// Assignment statements begin with a destination variable.
+				if (childNode.numChildren() > 3 &&
+					childNode.Child(0) instanceof ClangVariableToken) {
+					HighVariable destination =
+							((ClangVariableToken) childNode.Child(0)).getHighVariable();
+					ClangNode sourceNode = childNode.Child(childNode.numChildren() - 1);
+
+					// Verify that there is a source variable and that the destination is a global
+					// variable.
+					if (destination instanceof HighGlobal &&
+						(sourceNode instanceof ClangVariableToken ||
+						sourceNode instanceof ClangFieldToken)) {
+						Address globalAddress = destination.getRepresentative().getAddress();
+						println("Found global assignment: " + childNode.toString());
+
+						// Retrieve the source data type.
+						DataType sourceDataType = null;
+						if (sourceNode instanceof ClangVariableToken) {
+							ClangVariableToken sourceToken = (ClangVariableToken) sourceNode;
+							if (sourceToken.getHighVariable() != null) {
+								sourceDataType = sourceToken.getHighVariable().getDataType();
+							}
+						} else {
+							ClangFieldToken sourceToken = (ClangFieldToken) sourceNode;
+							Structure structureType = (Structure) sourceToken.getDataType();
+							sourceDataType = structureType.getDataTypeAt(
+									sourceToken.getOffset()).getDataType();
+						}
+
+						// Apply label names for certain global variables.
+						// These are usually defined by UefiBootServicesTableLib,
+						// UefiRuntimeServicesTableLib, and similar libraries in EDK2.
+						if (sourceDataType != null) {
+							String name = null;
+							switch (sourceDataType.getName()) {
+								case "EFI_BOOT_SERVICES *":
+									name = "gBS";
+									break;
+								case "EFI_HANDLE":
+									name = "gImageHandle";
+									break;
+								case "EFI_RUNTIME_SERVICES *":
+									name = "gRS";
+									break;
+								case "EFI_SYSTEM_TABLE *":
+									name = "gST";
+									break;
+							}
+
+							// Update the global variable with the source data type.
+							defineData(globalAddress, sourceDataType, name);
+							printf("%s> - Applied %s data type to 0x%s\n", getScriptName(),
+									destination.getDataType().getName(),
+									globalAddress.toString().toUpperCase());
+						}
+					}
+				} else {
+					propagateGlobalTypes((ClangTokenGroup) childNode);
+				}
+			}
+		}
 	}
 
 	/**
@@ -131,8 +205,7 @@ public class UEFIHelper extends GhidraScript {
 	 *
 	 * @param entryPointAddress the address of the entry point function
 	 */
-	private void defineEntryPoint(Address entryPointAddress) throws DuplicateNameException,
-			InvalidInputException {
+	private void defineEntryPoint(Address entryPointAddress) throws Exception {
 		Function entryPoint = getFunctionAt(entryPointAddress);
 		if (entryPoint == null) {
 			// Create the entry point function if it wasn't already defined.
@@ -145,6 +218,20 @@ public class UEFIHelper extends GhidraScript {
 		FunctionDefinition entryPointDefinition = (FunctionDefinition) uefiTypeManager.getDataType(
 				"/UefiApplicationEntryPoint.h/functions/_ModuleEntryPoint");
 		updateFunctionSignature(entryPoint, entryPointDefinition);
+
+		// Decompile the entry point function.
+		DecompInterface decompiler = new DecompInterface();
+		DecompileOptions options = new DecompileOptions();
+		options.grabFromProgram(currentProgram);
+		decompiler.setOptions(options);
+		decompiler.setSimplificationStyle("decompile");
+		decompiler.openProgram(currentProgram);
+
+		// Propagate global types in the entry point (e.g. gBS/etc).
+		DecompileResults results = decompiler.decompileFunction(entryPoint,
+				options.getDefaultTimeout(), getMonitor());
+		ClangTokenGroup tokenGroup = results.getCCodeMarkup();
+		propagateGlobalTypes(tokenGroup);
 	}
 
 	/**
