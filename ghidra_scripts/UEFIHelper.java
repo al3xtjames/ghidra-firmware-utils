@@ -104,19 +104,25 @@ public class UEFIHelper extends GhidraScript {
 	}
 
 	/**
-	 * Defines a specified DataType at a specified Address. Existing data definitions that would
-	 * conflict with the new DataType will be removed.
+	 * Defines a specified DataType at a specified Address. Existing data or instructions that
+	 * would conflict with the new DataType will be removed.
 	 *
 	 * @param address  the specified Address
 	 * @param dataType the specified DataType
 	 * @param name     an optional name to use for the data type's label
 	 */
 	private void defineData(Address address, DataType dataType, String name) throws Exception {
-		// Remove any existing data definitions that would overlap with this definition.
+		// Remove any existing data or instructions that would overlap with this definition.
 		for (int i = 0; i < dataType.getLength(); i++) {
-			Data existingData = getDataAt(address.add(i));
+			Address currentAddress = address.add(i);
+			Data existingData = getDataAt(currentAddress);
 			if (existingData != null) {
 				removeData(existingData);
+			} else {
+				Instruction existingInstruction = getInstructionAt(currentAddress);
+				if (existingInstruction != null) {
+					removeInstruction(existingInstruction);
+				}
 			}
 		}
 
