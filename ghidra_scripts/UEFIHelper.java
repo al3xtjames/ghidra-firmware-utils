@@ -110,8 +110,10 @@ public class UEFIHelper extends GhidraScript {
 	 * @param address  the specified Address
 	 * @param dataType the specified DataType
 	 * @param name     an optional name to use for the data type's label
+	 * @param comment  an optional comment
 	 */
-	private void defineData(Address address, DataType dataType, String name) throws Exception {
+	private void defineData(Address address, DataType dataType, String name,
+			String comment) throws Exception {
 		// Remove any existing data or instructions that would overlap with this definition.
 		for (int i = 0; i < dataType.getLength(); i++) {
 			Address currentAddress = address.add(i);
@@ -130,6 +132,11 @@ public class UEFIHelper extends GhidraScript {
 		createData(address, dataType);
 		if (name != null) {
 			createLabel(address, name, true);
+		}
+
+		// Add a comment (if specified).
+		if (comment != null) {
+			setPlateComment(address, comment);
 		}
 	}
 
@@ -193,7 +200,7 @@ public class UEFIHelper extends GhidraScript {
 							}
 
 							// Update the global variable with the source data type.
-							defineData(globalAddress, sourceDataType, name);
+							defineData(globalAddress, sourceDataType, name, null);
 							printf("%s> - Applied %s data type to 0x%s\n", getScriptName(),
 									destination.getDataType().getName(),
 									globalAddress.toString().toUpperCase());
@@ -283,7 +290,8 @@ public class UEFIHelper extends GhidraScript {
 					}
 
 					// Apply the EFI_GUID data type for the GUID we found.
-					defineData(lastGuidAddress, efiGuidType, UUIDUtils.getName(uuid));
+					defineData(lastGuidAddress, efiGuidType, UUIDUtils.getName(uuid),
+							uuid.toString());
 					index += efiGuidType.getLength();
 				} else {
 					index += 1;
@@ -313,7 +321,7 @@ public class UEFIHelper extends GhidraScript {
 						address.toString().toUpperCase());
 
 				// Apply the EFI_GUID data type.
-				defineData(address, efiGuidType, guidName);
+				defineData(address, efiGuidType, guidName, uuid.toString());
 			}
 		}
 	}
