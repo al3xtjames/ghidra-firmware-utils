@@ -36,8 +36,7 @@ import ghidra.program.model.data.*;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.listing.Function.FunctionUpdateType;
 import ghidra.program.model.mem.MemoryBlock;
-import ghidra.program.model.pcode.HighGlobal;
-import ghidra.program.model.pcode.HighVariable;
+import ghidra.program.model.pcode.*;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.Msg;
 import ghidra.util.exception.DuplicateNameException;
@@ -45,14 +44,24 @@ import ghidra.util.exception.InvalidInputException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * UEFI helper script
  */
 public class UEFIHelper extends GhidraScript {
 	private DataTypeManager uefiTypeManager;
+	//private
+
+	/**
+	 * Loads the specified file from the plugin's data directory.
+	 *
+	 * @param name the specified filename
+	 */
+	private File loadDataFile(String name) throws IOException {
+		return new File(new File(
+				sourceFile.getParentFile().getParentFile().getFile(true), "data"), name);
+	}
 
 	/**
 	 * Loads the specified data type library and returns a corresponding DataTypeManager.
@@ -72,9 +81,7 @@ public class UEFIHelper extends GhidraScript {
 		}
 
 		// Load the data type library from the plugin's data directory.
-		File dataTypeFile = new File(new File(
-				sourceFile.getParentFile().getParentFile().getFile(true), "data"), name);
-		return service.openArchive(dataTypeFile, false).getDataTypeManager();
+		return service.openArchive(loadDataFile(name), false).getDataTypeManager();
 	}
 
 	/**
@@ -146,7 +153,7 @@ public class UEFIHelper extends GhidraScript {
 	 *
 	 * @param root the root ClangTokenGroup to search in
 	 */
-	private void propagateGlobalTypes(ClangTokenGroup root) throws Exception {
+	private void propagateGlobalVariables(ClangTokenGroup root) throws Exception {
 		for (int i = 0; i < root.numChildren(); i++) {
 			ClangNode childNode = root.Child(i);
 			if (childNode instanceof ClangTokenGroup) {
@@ -163,7 +170,6 @@ public class UEFIHelper extends GhidraScript {
 						(sourceNode instanceof ClangVariableToken ||
 						sourceNode instanceof ClangFieldToken)) {
 						Address globalAddress = destination.getRepresentative().getAddress();
-						println("Found global assignment: " + childNode.toString());
 
 						// Retrieve the source data type.
 						DataType sourceDataType = null;
@@ -180,8 +186,8 @@ public class UEFIHelper extends GhidraScript {
 						}
 
 						// Apply label names for certain global variables.
-						// These are usually defined by UefiBootServicesTableLib,
-						// UefiRuntimeServicesTableLib, and similar libraries in EDK2.
+						// These are defined by the UefiBootServicesTableLib and
+						// UefiRuntimeServicesTableLib libraries in EDK2.
 						if (sourceDataType != null) {
 							String name = null;
 							switch (sourceDataType.getName()) {
@@ -197,9 +203,13 @@ public class UEFIHelper extends GhidraScript {
 								case "EFI_SYSTEM_TABLE *":
 									name = "gST";
 									break;
+								default:
+									// Avoid propagating other data types.
+									continue;
 							}
 
 							// Update the global variable with the source data type.
+							println("Found global assignment: " + childNode.toString());
 							defineData(globalAddress, sourceDataType, name, null);
 							printf("%s> - Applied %s data type to 0x%s\n", getScriptName(),
 									destination.getDataType().getName(),
@@ -207,7 +217,92 @@ public class UEFIHelper extends GhidraScript {
 						}
 					}
 				} else {
-					propagateGlobalTypes((ClangTokenGroup) childNode);
+					propagateGlobalVariables((ClangTokenGroup) childNode);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Propagates data types to functions called from a specified ClangTokenGroup.
+	 *
+	 * @param decompiler the DecompInterface
+	 * @param options    the specified options for the previously specified DecompInterface
+	 * @param root       the specified ClangTokenGroup
+	 */
+	private void propagateFunctionParameters(DecompInterface decompiler, DecompileOptions options,
+			ClangTokenGroup root) throws Exception {
+		for (int i = 0; i < root.numChildren(); i++) {
+			ClangNode childNode = root.Child(i);
+			if (childNode instanceof ClangTokenGroup && childNode.numChildren() > 1) {
+				// Look for a function call in this token group.
+				ClangFuncNameToken funcToken = null;
+				int funcTokenIndex = 0;
+				while (funcTokenIndex < childNode.numChildren()) {
+					if (childNode.Child(funcTokenIndex) instanceof ClangFuncNameToken) {
+						funcToken = (ClangFuncNameToken) childNode.Child(funcTokenIndex);
+						if (funcToken.getPcodeOp() != null &&
+							funcToken.getPcodeOp().getOpcode() == PcodeOp.CALL) {
+							break;
+						} else {
+							funcToken = null;
+						}
+					}
+
+					funcTokenIndex++;
+				}
+
+				if (funcToken != null) {
+					Msg.debug(this, "Found function name token: " + funcToken.toString());
+					Function function = getFunctionAt(
+							funcToken.getPcodeOp().getInput(0).getAddress());
+					ArrayList<ParameterImpl> parameters = new ArrayList<>();
+					Parameter[] originalParameters = function.getParameters();
+					int parameterNumber = 0;
+					// Parse each parameter token and update the function signature with each
+					// parameter's data type.
+					for (int j = 1; j < childNode.numChildren(); j++) {
+						if (childNode.Child(j) instanceof ClangVariableToken) {
+							ClangVariableToken variableToken =
+									(ClangVariableToken) childNode.Child(j);
+							if (variableToken.getHighVariable() != null) {
+								DataType parameterType =
+										variableToken.getHighVariable().getDataType();
+								Parameter originalParameter =
+										originalParameters[parameterNumber++];
+								Msg.debug(this, "Found parameter: " +
+										variableToken.getHighVariable().getName() + " (" +
+										parameterType.getName() + ')');
+								switch (parameterType.getName()) {
+									case "EFI_BOOT_SERVICES *":
+									case "EFI_HANDLE":
+									case "EFI_RUNTIME_SERVICES *":
+									case "EFI_SYSTEM_TABLE *":
+										// Replace the data type for the current parameter.
+										parameters.add(new ParameterImpl(originalParameter.getName(),
+												parameterType, getCurrentProgram()));
+										break;
+									default:
+										// Reuse the original data type for the current parameter.
+										parameters.add(new ParameterImpl(originalParameter.getName(),
+												originalParameter.getDataType(),
+												originalParameter.getVariableStorage(),
+												getCurrentProgram()));
+								}
+							}
+						}
+					}
+
+					if (parameters.size() == originalParameters.length) {
+						function.updateFunction(null, null, parameters,
+								FunctionUpdateType.DYNAMIC_STORAGE_FORMAL_PARAMS, false,
+								SourceType.DEFAULT);
+						println("Updated " + function.getName() + " function signature");
+					} else {
+						Msg.error(this, "Failed to parse " + function.getName() + " parameters");
+					}
+				} else {
+					propagateFunctionParameters(decompiler, options, (ClangTokenGroup) childNode);
 				}
 			}
 		}
@@ -239,12 +334,26 @@ public class UEFIHelper extends GhidraScript {
 		decompiler.setOptions(options);
 		decompiler.setSimplificationStyle("decompile");
 		decompiler.openProgram(currentProgram);
-
-		// Propagate global types in the entry point (e.g. gBS/etc).
 		DecompileResults results = decompiler.decompileFunction(entryPoint,
 				options.getDefaultTimeout(), getMonitor());
+
+		// Propagate global types in the entry point (e.g. gBS/etc).
 		ClangTokenGroup tokenGroup = results.getCCodeMarkup();
-		propagateGlobalTypes(tokenGroup);
+		println("Searching for global assignments...");
+		propagateGlobalVariables(tokenGroup);
+
+		// Propagate entry point parameters to called functions.
+		println("Propagating types to called functions...");
+		propagateFunctionParameters(decompiler, options, tokenGroup);
+
+		// Propagate global types in functions called by the entry point.
+		Set<Function> functions = entryPoint.getCalledFunctions(getMonitor());
+		for (Function function : functions) {
+			println("Searching for global assignments in " + function.getName() + "...");
+			results = decompiler.decompileFunction(function,
+					options.getDefaultTimeout(), getMonitor());
+			propagateGlobalVariables(results.getCCodeMarkup());
+		}
 	}
 
 	/**
@@ -401,10 +510,12 @@ public class UEFIHelper extends GhidraScript {
 		// Load the UEFI data type library.
 		uefiTypeManager = loadDataTypeLibrary(libraryName);
 
-		// Fix the entry point function signature.
+		// Fix the entry point function signature and propagate the parameter types.
 		defineEntryPoint(entryPointAddress);
 
 		// Search for known GUIDs in the program's .data segment.
 		defineGUIDs();
+
+		// Define protocol interfaces (in calls to LocateProtocol/HandleProtocol/etc).
 	}
 }
