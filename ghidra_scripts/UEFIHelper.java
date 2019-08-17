@@ -357,49 +357,35 @@ public class UEFIHelper extends GhidraScript {
 	}
 
 	/**
-	 * Searches for known GUIDs in the current program's .data segment and applies the EFI_GUID
-	 * type definition.
+	 * Searches for known GUIDs in the specified MemoryBlock and applies the EFI_GUID data type.
+	 *
+	 * @param block the specified MemoryBlock
 	 */
-	private void defineGUIDs() throws Exception {
+	private void defineGUIDs(MemoryBlock block) throws Exception {
 		println("Searching for GUIDs...");
 
 		// Read the contents .data segment.
-		MemoryBlock dataBlock = currentProgram.getMemory().getBlock(".data");
-		byte[] blockBytes = new byte[(int) dataBlock.getSize()];
-		dataBlock.getBytes(dataBlock.getStart(), blockBytes);
+		byte[] blockBytes = new byte[(int) block.getSize()];
+		block.getBytes(block.getStart(), blockBytes);
 		BinaryReader reader = new BinaryReader(new ByteArrayProvider(blockBytes), true);
 
 		// Find the EFI_GUID data type.
 		DataType efiGuidType = uefiTypeManager.getDataType("/UefiBaseType.h/EFI_GUID");
 
 		// Search for known GUIDs in the GUID database.
-		Address firstGuidAddress = null;
-		Address lastGuidAddress = null;
 		long index = 0;
-		while (index < dataBlock.getSize() - efiGuidType.getLength()) {
+		while (index < block.getSize() - efiGuidType.getLength()) {
 			UUID uuid = UUIDUtils.fromBinaryReader(reader);
 			if (uuid.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
 				index += efiGuidType.getLength();
 			} else {
 				if (UUIDUtils.dbContains(uuid)) {
-					lastGuidAddress = dataBlock.getStart().add(index);
-					if (firstGuidAddress == null) {
-						firstGuidAddress = lastGuidAddress;
-					}
-
+					Address guidAddress = block.getStart().add(index);
 					println("GUID: Found " + UUIDUtils.getName(uuid) + " (" + uuid.toString() +
-							") at 0x" + lastGuidAddress.toString().toUpperCase());
-
-					// Remove any existing data that would overlap with this definition.
-					for (int i = 0; i < efiGuidType.getLength(); i++) {
-						Data existingData = getDataAt(lastGuidAddress.add(i));
-						if (existingData != null) {
-							removeData(existingData);
-						}
-					}
+							") at 0x" + guidAddress.toString().toUpperCase());
 
 					// Apply the EFI_GUID data type for the GUID we found.
-					defineData(lastGuidAddress, efiGuidType, UUIDUtils.getName(uuid),
+					defineData(guidAddress, efiGuidType, UUIDUtils.getName(uuid),
 							uuid.toString());
 					index += efiGuidType.getLength();
 				} else {
@@ -408,30 +394,6 @@ public class UEFIHelper extends GhidraScript {
 			}
 
 			reader.setPointerIndex(index);
-		}
-
-		// There may be undefined GUIDs present in the undefined data between the GUIDs we just
-		// defined. Apply the EFI_GUID type to this undefined data.
-		if (false && firstGuidAddress != null) {
-			int unknownGuidNumber = 1;
-			for (Address address = firstGuidAddress;
-				 address.getUnsignedOffset() < lastGuidAddress.getUnsignedOffset();
-				 address = address.add(efiGuidType.getLength())) {
-				// Skip known GUIDs that we previously defined.
-				Data data = getDataAt(address);
-				if (data != null && data.getDataType().isEquivalent(efiGuidType)) {
-					continue;
-				}
-
-				reader.setPointerIndex(address.subtract(dataBlock.getStart()));
-				UUID uuid = UUIDUtils.fromBinaryReader(reader);
-				String guidName = "UnknownGuid" + unknownGuidNumber++;
-				println("GUID: Found " + guidName + " (" + uuid.toString() + ") at 0x" +
-						address.toString().toUpperCase());
-
-				// Apply the EFI_GUID data type.
-				defineData(address, efiGuidType, guidName, uuid.toString());
-			}
 		}
 	}
 
@@ -513,8 +475,16 @@ public class UEFIHelper extends GhidraScript {
 		// Fix the entry point function signature and propagate the parameter types.
 		defineEntryPoint(entryPointAddress);
 
-		// Search for known GUIDs in the program's .data segment.
-		defineGUIDs();
+		// Search for known GUIDs in the program's .data and .text segments.
+		MemoryBlock dataBlock = currentProgram.getMemory().getBlock(".data");
+		if (dataBlock != null) {
+			defineGUIDs(dataBlock);
+		}
+
+		MemoryBlock textBlock = currentProgram.getMemory().getBlock(".text");
+		if (textBlock != null) {
+			defineGUIDs(textBlock);
+		}
 
 		// Define protocol interfaces (in calls to LocateProtocol/HandleProtocol/etc).
 	}
