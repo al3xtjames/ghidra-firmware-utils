@@ -51,7 +51,6 @@ import java.util.*;
  */
 public class UEFIHelper extends GhidraScript {
 	private DataTypeManager uefiTypeManager;
-	//private
 
 	/**
 	 * Loads the specified file from the plugin's data directory.
@@ -198,7 +197,7 @@ public class UEFIHelper extends GhidraScript {
 									name = "gImageHandle";
 									break;
 								case "EFI_RUNTIME_SERVICES *":
-									name = "gRS";
+									name = "gRT";
 									break;
 								case "EFI_SYSTEM_TABLE *":
 									name = "gST";
@@ -486,6 +485,9 @@ public class UEFIHelper extends GhidraScript {
 			defineGUIDs(textBlock);
 		}
 
-		// Define protocol interfaces (in calls to LocateProtocol/HandleProtocol/etc).
+		// Potential additions / TODO(?)
+		//  - Locate GUIDs in calls to EFI boot/runtime services and apply the EFI_GUID data type
+		//  - Maintain a database for protocol GUID->data type name mappings and apply data types
+		//    for protocol interfaces (in calls to LocateProtocol/etc)
 	}
 }

@@ -1,10 +1,10 @@
 Ghidra Firmware Utilities
 =========================
 
-Various modules for [Ghidra][1] to assist with PC firmware reverse-engineering.
-This was accepted as a [coreboot project][2] for GSoC 2019.
+Various modules for [Ghidra][1] to assist with PC firmware reverse engineering.
+This was accepted as a [coreboot project for GSoC 2019][2].
 
-## Features (very much WIP)
+## Features
 ### PCI option ROM loader
  - Implements a FS loader for PCI option ROMs (handles hybrid ROMs with
    multiple images, e.g. legacy x86 + UEFI)
@@ -26,11 +26,8 @@ This was accepted as a [coreboot project][2] for GSoC 2019.
 ### UEFI helper script
  - Includes data type libraries for base UEFI types (taken from EDK2 MdePkg)
  - Fixes the signature of the entry point function
- - Defines known GUIDs in the binary's .data segment
-
-## Planned functionality / TODO
-### UEFI helper script
- - Write helper script to import GUIDs/etc (similar to [ida-efitools][3])
+ - Defines known GUIDs in the binary's .data/.text segments
+ - Locates and defines global copies of UEFI table pointers (gBS/gRT/gST/etc)
 
 ## Building & Installation
 
