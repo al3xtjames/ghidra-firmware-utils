@@ -38,12 +38,12 @@ for building in an IDE):
 ### Environment variable
 ```bash
 $ export GHIDRA_INSTALL_DIR="/path/to/ghidra"
-$ gradle
+$ ./gradlew
 ```
 
 ### Gradle property
 ```bash
-echo GHIDRA_INSTALL_DIR="/path/to/ghidra" > gradle.properties
+echo GHIDRA_INSTALL_DIR=/path/to/ghidra > gradle.properties
 ```
 
 The module ZIP will be output to `dist/`. Use **File > Install Extensions** and
