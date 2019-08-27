@@ -260,7 +260,8 @@ public class UEFIHelper extends GhidraScript {
 					int parameterNumber = 0;
 					// Parse each parameter token and update the function signature with each
 					// parameter's data type.
-					for (int j = 1; j < childNode.numChildren(); j++) {
+					for (int j = 1; j < childNode.numChildren() &&
+							parameterNumber < originalParameters.length; j++) {
 						if (childNode.Child(j) instanceof ClangVariableToken) {
 							ClangVariableToken variableToken =
 									(ClangVariableToken) childNode.Child(j);
