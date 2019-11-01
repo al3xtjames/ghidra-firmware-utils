@@ -21,7 +21,6 @@ import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.bin.format.pe.MachineConstants;
 import ghidra.app.util.bin.format.pe.PeSubsystem;
-import ghidra.app.util.importer.MemoryConflictHandler;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
@@ -74,7 +73,7 @@ public class TELoader extends AbstractLibrarySupportLoader {
 
 	@Override
 	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-						Program program, MemoryConflictHandler handler, TaskMonitor monitor,
+						Program program, TaskMonitor monitor,
 						MessageLog log) throws IOException {
 		BinaryReader reader = new BinaryReader(provider, true);
 		TerseExecutableHeader teHeader = new TerseExecutableHeader(reader);
