@@ -66,6 +66,10 @@ public class TELoader extends AbstractLibrarySupportLoader {
 				loadSpecs.add(new LoadSpec(this, header.getImageBase(),
 						new LanguageCompilerSpecPair("x86:LE:64:default", "windows"), true));
 				break;
+			case MachineConstants.IMAGE_FILE_MACHINE_ARM64:
+				loadSpecs.add(new LoadSpec(this, header.getImageBase(),
+						new LanguageCompilerSpecPair("AARCH64:LE:64:v8A", "windows"), true));
+				break;
 		}
 
 		return loadSpecs;
