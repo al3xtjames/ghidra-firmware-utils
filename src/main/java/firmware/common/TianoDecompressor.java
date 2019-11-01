@@ -23,15 +23,12 @@ import util.JNILibraryLoader;
  * Handles the decompression of images compressed with the Tiano Compression Algorithm.
  */
 public class TianoDecompressor {
-	private static boolean loadFailed = false;
-	private static Throwable throwable = null;
-
 	static {
 		try {
 			JNILibraryLoader.loadLibrary("efidecompress");
 		} catch (Throwable t) {
-			loadFailed = true;
-			throwable = t;
+			Msg.showError(TianoDecompressor.class, null, "Tiano Decompresor",
+				"Failed to load libefidecompress native library");
 		}
 	}
 
@@ -51,14 +48,6 @@ public class TianoDecompressor {
 	 * @param compressedImage the compressed image
 	 */
 	public static byte[] decompress(byte[] compressedImage) {
-		if (loadFailed) {
-			Msg.showError(TianoDecompressor.class, null, "Tiano Decompressor",
-			              "Failed to load libefidecompress JNI library: " + throwable.getMessage(),
-			              throwable);
-			// FIXME: Find a proper way to stop the plugin and indicate that an error occurred
-			return null;
-		}
-
 		return nativeDecompress(compressedImage);
 	}
 }
