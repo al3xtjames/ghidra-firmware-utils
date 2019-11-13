@@ -104,6 +104,12 @@ public class TELoader extends AbstractLibrarySupportLoader {
 
 			// Create a segment for each section.
 			for (EFIImageSectionHeader sectionHeader : sectionHeaders) {
+				// Skip empty sections.
+				if (sectionHeader.getVirtualSize() == 0) {
+					Msg.debug(this, "Skipping empty section: " + sectionHeader.getName());
+					continue;
+				}
+
 				inputStream = provider.getInputStream(sectionHeader.getVirtualAddress() -
 						teHeader.getHeaderOffset());
 				long startAddress = teHeader.getImageBase() + sectionHeader.getVirtualAddress();
