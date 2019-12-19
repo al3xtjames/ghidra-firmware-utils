@@ -655,10 +655,6 @@ Returns: (void)
   uint64_t  DataIdx;
   uint16_t  CharC;
 
-  BytesRemain = (uint16_t) (-1);
-
-  DataIdx     = 0;
-
   while(1) {
     CharC = DecodeC (Sd);
     if (Sd->mBadTableFlag != 0) {
@@ -988,12 +984,12 @@ LLVMFuzzerTestOneInput (
     return 0;
   }
 
-  uint8_t *OutputBuf = malloc (OutputSize * sizeof (uint8_t));
+  uint8_t *OutputBuf = malloc (OutputSize);
   if (!OutputBuf) {
     return 0;
   }
 
-  uint8_t *ScratchBuf = malloc (ScratchSize * sizeof (uint8_t));
+  uint8_t *ScratchBuf = malloc (ScratchSize);
   if (!ScratchBuf) {
     free (OutputBuf);
     return 0;
@@ -1179,6 +1175,8 @@ main (
     return 1;
   }
 
+  int ReturnValue = 0;
+
   FILE *InputFile = fopen (argv[1], "rb");
   if (!InputFile) {
     fprintf (stderr, "Failed to open %s: %s\n", argv[1], strerror (errno));
@@ -1189,77 +1187,76 @@ main (
   size_t InputSize = ftell (InputFile);
   rewind (InputFile);
 
-  uint8_t *InputBuf = malloc (InputSize * sizeof (uint8_t));
-  if (fread (InputBuf, sizeof (uint8_t), InputSize, InputFile) != InputSize) {
+  uint8_t *InputBuf = malloc (InputSize);
+  if (!InputBuf) {
+    fprintf (stderr, "Failed to allocate memory for input buffer\n");
+    ReturnValue = 1;
+    goto InputBufError;
+  }
+
+  if (fread (InputBuf, 1, InputSize, InputFile) != InputSize) {
     fprintf (stderr, "Failed to read %s\n", argv[1]);
-    free (InputBuf);
-    fclose (InputFile);
-    return 1;
+    ReturnValue = 1;
+    goto InputBufError;
   }
 
   size_t OutputSize;
   size_t ScratchSize;
   if (EfiGetInfo (InputBuf, InputSize, &OutputSize, &ScratchSize) != RETURN_SUCCESS) {
     fprintf (stderr, "Failed to get compression info\n");
-    free (InputBuf);
-    fclose (InputFile);
-    return 1;
+    ReturnValue = 1;
+    goto InputBufError;
   }
 
   printf ("Compressed size is %zu bytes, uncompressed size is %zu bytes\n",
           InputSize - 8, OutputSize);
 
-  uint8_t *OutputBuf = malloc (OutputSize * sizeof (uint8_t));
+  uint8_t *OutputBuf = malloc (OutputSize);
   if (!OutputBuf) {
     fprintf (stderr, "Failed to allocate memory for output buffer\n");
-    free (InputBuf);
-    fclose (InputFile);
+    ReturnValue = 1;
+    goto OutputBufError;
   }
 
-  uint8_t *ScratchBuf = malloc (ScratchSize * sizeof (uint8_t));
+  uint8_t *ScratchBuf = malloc (ScratchSize);
   if (!ScratchBuf) {
     fprintf (stderr, "Failed to allocate memory for scratch buffer\n");
-    free (OutputBuf);
-    free (InputBuf);
-    fclose (InputFile);
+    ReturnValue = 1;
+    goto ScratchBufError;
   }
 
   if (EfiDecompress (InputBuf, InputSize, OutputBuf, OutputSize,
                      ScratchBuf, ScratchSize) != RETURN_SUCCESS) {
     fprintf (stderr, "Failed to decompress input\n");
-    free (ScratchBuf);
-    free (OutputBuf);
-    free (InputBuf);
-    fclose (InputFile);
-    return 1;
+    ReturnValue = 1;
+    goto ScratchBufError;
   }
 
   FILE *OutputFile = fopen (argv[2], "wb");
   if (!OutputFile) {
     fprintf (stderr, "Failed to open %s: %s\n", argv[2], strerror (errno));
-    free (ScratchBuf);
-    free (OutputBuf);
-    free (InputBuf);
-    fclose (InputFile);
+    ReturnValue = 1;
+    goto ScratchBufError;
   }
 
-  if (fwrite (OutputBuf, sizeof (uint8_t), OutputSize, OutputFile) != OutputSize) {
+  if (fwrite (OutputBuf, 1, OutputSize, OutputFile) != OutputSize) {
     fprintf (stderr, "Failed to write %s\n", argv[2]);
-    fclose (OutputFile);
-    free (ScratchBuf);
-    free (OutputBuf);
-    free (InputBuf);
-    fclose (InputFile);
+    ReturnValue = 1;
+    goto OutputFileError;
   }
 
   printf ("Wrote %zu bytes to %s\n", OutputSize, argv[2]);
 
+OutputFileError:
   fclose (OutputFile);
+ScratchBufError:
   free (ScratchBuf);
+OutputBufError:
   free (OutputBuf);
+InputBufError:
   free (InputBuf);
   fclose (InputFile);
 
-  return 0;
+  return ReturnValue;
 }
 #endif // CONFIG_UTIL
