@@ -27,7 +27,7 @@ public class TianoDecompressor {
 		try {
 			JNILibraryLoader.loadLibrary("efidecompress");
 		} catch (Throwable t) {
-			Msg.showError(TianoDecompressor.class, null, "Tiano Decompresor",
+			Msg.showError(TianoDecompressor.class, null, "Tiano Decompressor",
 				"Failed to load libefidecompress native library");
 		}
 	}

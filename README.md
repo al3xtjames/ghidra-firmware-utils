@@ -49,6 +49,11 @@ echo GHIDRA_INSTALL_DIR=/path/to/ghidra > gradle.properties
 The module ZIP will be output to `dist/`. Use **File > Install Extensions** and
 select the green plus to browse to the extension. Restart Ghidra when prompted.
 
+For proper functionality, the plugin should be built with the same JRE used
+by your Ghidra installation. If you have multiple Java runtime environments
+installed, select the correct JRE by setting the `JAVA_HOME` environment
+variable before building.
+
 ## Usage
 ### PCI option ROM loader
 Add a PCI option ROM to a Ghidra project. Legacy x86 option ROMs can be

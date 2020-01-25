@@ -27,7 +27,7 @@ public class EFIDecompressor {
 		try {
 			JNILibraryLoader.loadLibrary("efidecompress");
 		} catch (Throwable t) {
-			Msg.showError(EFIDecompressor.class, null, "EFI Decompresor",
+			Msg.showError(EFIDecompressor.class, null, "EFI Decompressor",
 					"Failed to load libefidecompress native library");
 		}
 	}
