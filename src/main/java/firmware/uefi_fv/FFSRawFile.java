@@ -16,13 +16,14 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
 
 /**
  * UEFIFile implementation for the contents of a raw FFS file.
@@ -39,13 +40,14 @@ public class FFSRawFile implements UEFIFile {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSRawFile(BinaryReader reader, int length, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public FFSRawFile(BinaryReader reader, int length, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		base = reader.getPointerIndex();
 		data = reader.readNextByteArray(length);
 
 		// Add this file to the FS.
-		fs.addFile(parent, this, false);
+		fsih.storeFileWithParent(UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1, false,
+				length(), this);
 	}
 
 	/**
@@ -62,6 +64,7 @@ public class FFSRawFile implements UEFIFile {
 	 *
 	 * @return the name of the current raw FFS file
 	 */
+	@Override
 	public String getName() {
 		return "Raw file";
 	}
@@ -71,6 +74,7 @@ public class FFSRawFile implements UEFIFile {
 	 *
 	 * @return the length of the current raw FFS file
 	 */
+	@Override
 	public long length() {
 		return data.length;
 	}

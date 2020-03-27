@@ -16,12 +16,13 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
 
 /**
  * Parser for generic FFS sections. This only parses the common FFS section header; the rest of the
@@ -48,12 +49,12 @@ public class FFSGenericSection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSGenericSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public FFSGenericSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		this(reader);
 
 		// Add this section to the current FS.
-		fs.addFile(parent, this, getName(), false);
+		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
 	}
 
 	/**

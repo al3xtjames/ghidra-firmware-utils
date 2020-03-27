@@ -16,10 +16,11 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.IOException;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
 
 /**
  * Factory for constructing the correct FFSSection based off the type field in the common FFS
@@ -39,10 +40,10 @@ public class FFSSectionFactory {
 	public static FFSSection parseSection(BinaryReader reader) throws IOException {
 		byte type = reader.readByte(reader.getPointerIndex() + 3);
 		switch (type) {
-			case UEFIFFSConstants.SectionType.USER_INTERFACE:
-				return new FFSUISection(reader);
-			default:
-				return new FFSGenericSection(reader);
+		case UEFIFFSConstants.SectionType.USER_INTERFACE:
+			return new FFSUISection(reader);
+		default:
+			return new FFSGenericSection(reader);
 		}
 	}
 
@@ -55,24 +56,24 @@ public class FFSSectionFactory {
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 * @return       the parsed FFSSection
 	 */
-	public static FFSSection parseSection(BinaryReader reader,
-			UEFIFirmwareVolumeFileSystem fs, GFile parent) throws IOException {
+	public static FFSSection parseSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		byte type = reader.readByte(reader.getPointerIndex() + 3);
 		switch (type) {
 			case UEFIFFSConstants.SectionType.COMPRESSION:
-				return new FFSCompressedSection(reader, fs, parent);
+				return new FFSCompressedSection(reader, fsih, parent);
 			case UEFIFFSConstants.SectionType.GUID_DEFINED:
-				return new FFSGUIDDefinedSection(reader, fs, parent);
+				return new FFSGUIDDefinedSection(reader, fsih, parent);
 			case UEFIFFSConstants.SectionType.VERSION:
-				return new FFSVersionSection(reader, fs, parent);
+				return new FFSVersionSection(reader, fsih, parent);
 			case UEFIFFSConstants.SectionType.USER_INTERFACE:
-				return new FFSUISection(reader, fs, parent);
+				return new FFSUISection(reader, fsih, parent);
 			case UEFIFFSConstants.SectionType.FIRMWARE_VOLUME_IMAGE:
-				return new FFSVolumeImageSection(reader, fs, parent);
+				return new FFSVolumeImageSection(reader, fsih, parent);
 			case UEFIFFSConstants.SectionType.FREEFORM_SUBTYPE_GUID:
-				return new FFSFreeformSubtypeSection(reader, fs, parent);
+				return new FFSFreeformSubtypeSection(reader, fsih, parent);
 			default:
-				return new FFSGenericSection(reader, fs, parent);
+				return new FFSGenericSection(reader, fsih, parent);
 		}
 	}
 }

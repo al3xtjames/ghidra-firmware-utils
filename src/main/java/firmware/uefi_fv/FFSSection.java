@@ -16,15 +16,16 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
 
+import ghidra.app.util.bin.BinaryReader;
+
 /**
  * Parser for the common FFS section header, which has the following fields:
  *
+ * <pre>
  *   Common UEFI FFS Section Header
  *   +------+------+----------------------------------------+
  *   | Type | Size | Description                            |
@@ -33,6 +34,7 @@ import java.util.Formatter;
  *   | u8   |    1 | Type                                   |
  *   | u32  |    4 | Extended Size (FFSv3 large files only) |
  *   +------+------+----------------------------------------+
+ * </pre>
  *
  * Subclasses will parse additional fields for specific FFS section types.
  */
@@ -99,6 +101,7 @@ public abstract class FFSSection implements UEFIFile {
 	 *
 	 * @return the name of the current FFS section
 	 */
+	@Override
 	public String getName() {
 		return UEFIFFSConstants.SectionType.toString(type);
 	}
@@ -117,6 +120,7 @@ public abstract class FFSSection implements UEFIFile {
 	 *
 	 * @return the length of the body in the current FFS section
 	 */
+	@Override
 	public long length() {
 		return size;
 	}

@@ -16,6 +16,8 @@
 
 package firmware.cbfs;
 
+import java.nio.charset.StandardCharsets;
+
 /*
  * Various coreboot File System (CBFS) constants.
  */
@@ -24,7 +26,8 @@ public final class CBFSConstants {
 	public static final String CBFS_HEADER_SIGNATURE = "ORBC";
 
 	// CBFS file signature
-	public static final String CBFS_FILE_SIGNATURE = "LARCHIVE";
+	public static final byte[] CBFS_FILE_SIGNATURE = "LARCHIVE".getBytes(StandardCharsets.US_ASCII);
+	
 
 	// Minimum size of the CBFS file structure
 	public static final int CBFS_FILE_SIZE = 24;

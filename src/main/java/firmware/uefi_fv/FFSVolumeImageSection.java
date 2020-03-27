@@ -16,11 +16,12 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.IOException;
 import java.io.InputStream;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
 
 /**
  * Parser for FFS firmware volume image sections. These do not have additional header fields; see
@@ -37,15 +38,15 @@ public class FFSVolumeImageSection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSVolumeImageSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public FFSVolumeImageSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		super(reader);
 
 		// Add this section to the current FS.
-		GFile fileImpl = fs.addFile(parent, this, getName(), true);
+		GFile fileImpl = fsih.storeFileWithParent(getName(), parent, -1, true, -1, this);
 
 		// Add the nested firmware volume to the FS.
-		new UEFIFirmwareVolumeHeader(reader, fs, fileImpl, true);
+		new UEFIFirmwareVolumeHeader(reader, fsih, fileImpl, true);
 	}
 
 	/**
@@ -55,6 +56,7 @@ public class FFSVolumeImageSection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current firmware volume image section
 	 */
+	@Override
 	public InputStream getData() {
 		return null;
 	}

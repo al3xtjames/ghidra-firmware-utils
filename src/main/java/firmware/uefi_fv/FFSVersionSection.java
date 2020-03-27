@@ -16,16 +16,18 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.util.BoundedInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
+import ghidra.util.BoundedInputStream;
 
 /**
  * Parser for FFS version sections, which have the following specific fields:
  *
+ * <pre>
  *   UEFI FFS UI Section Header
  *   +-----------+------+---------------------------------+
  *   | Type      | Size | Description                     |
@@ -33,6 +35,7 @@ import java.io.InputStream;
  *   | u16       |    2 | Build Number                    |
  *   | wchar_t[] |  var | Version String (Unicode string) |
  *   +-----------+------+---------------------------------+
+ * </pre>
  *
  * This header follows the common section header. See FFSSection for additional information.
  */
@@ -48,20 +51,21 @@ public class FFSVersionSection extends FFSSection {
 	 * UEFIFirmwareVolumeFileSystem.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih {@link FileSystemIndexHelper} that handles files
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @throws IOException
 	 */
-	public FFSVersionSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
+	public FFSVersionSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih,
 			GFile parent) throws IOException {
 		super(reader);
 
 		inputStream = new BoundedInputStream(
-				reader.getByteProvider().getInputStream(reader.getPointerIndex()), length());
+			reader.getByteProvider().getInputStream(reader.getPointerIndex()), length());
 		buildNumber = reader.readNextShort();
 		versionString = reader.readNextUnicodeString((int) length() / 2);
 
 		// Add this section to the current FS.
-		fs.addFile(parent, this, getName(), false);
+		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
 	}
 
 	/**
@@ -78,6 +82,7 @@ public class FFSVersionSection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current version section
 	 */
+	@Override
 	public InputStream getData() {
 		return inputStream;
 	}
@@ -118,8 +123,7 @@ public class FFSVersionSection extends FFSSection {
 	 */
 	@Override
 	public String toString() {
-		return super.toString() +
-				"\nBuild number: " + buildNumber +
-				"\nVersion string: " + versionString;
+		return super.toString() + "\nBuild number: " + buildNumber + "\nVersion string: " +
+				versionString;
 	}
 }

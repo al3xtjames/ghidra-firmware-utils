@@ -24,6 +24,8 @@ import java.util.UUID;
 public final class UEFIFirmwareVolumeConstants {
 	// UEFI Firmware Volume signature
 	public static final String UEFI_FV_SIGNATURE = "_FVH";
+	public static final int UEFI_FV_SIGNATURE_LE = 0x4856465f;
+	public static final int UEFI_FV_SIGNATURE_LEN = 4;
 
 	// Size of the UEFI Firmware Volume Header structure
 	public static final int UEFI_FV_HEADER_SIZE = 72;
