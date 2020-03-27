@@ -24,6 +24,7 @@ import java.io.IOException;
 /**
  * Parser for the CBFS master header, which has the following structure.
  *
+ * <pre>
  *   CBFS Master Header
  *   +----------+------+--------------------------------+
  *   | Type    | Size | Description                     |
@@ -36,6 +37,7 @@ import java.io.IOException;
  *   | u32     |    4 | CBFS Offset (from start of ROM) |
  *   | u32     |    4 | Architecture                    |
  *   +---------+------+---------------------------------+
+ * </pre>
  *
  * There are four bytes of padding after the end of the CBFS master header.
  */

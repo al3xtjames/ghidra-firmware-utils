@@ -80,6 +80,7 @@ public class IntelFlashFileSystem implements GFileSystem {
 			provider.close();
 			provider = null;
 		}
+
 		fsih.clear();
 	}
 

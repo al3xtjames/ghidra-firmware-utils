@@ -29,6 +29,7 @@ import java.util.Formatter;
  * Parser for legacy x86/PC compatible option ROM images. There are additional fields in the ROM
  * header:
  *
+ * <pre>
  *   ROM Header
  *   +---------+------+------------------------------------+
  *   | Type    | Size | Description                        |
@@ -39,6 +40,7 @@ import java.util.Formatter;
  *   | u8[18]  |   18 | Reserved                           |
  *   | u16     |    2 | PCI Data Structure Offset          |
  *   +---------+------+------------------------------------+
+ * </pre>
  *
  * The Entry Point field in the ROM header usually contains a JMP (rel8 or rel16) instruction.
  */

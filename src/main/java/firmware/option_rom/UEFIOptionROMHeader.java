@@ -31,6 +31,7 @@ import java.util.Formatter;
 /**
  * Parser for UEFI option ROM images. There are additional fields in the ROM header:
  *
+ * <pre>
  *   ROM Header
  *   +---------+------+-------------------------------------------+
  *   | Type    | Size | Description                               |
@@ -45,6 +46,7 @@ import java.util.Formatter;
  *   | u16     |    2 | EFI Image Offset                          |
  *   | u16     |    2 | PCI Data Structure Offset                 |
  *   +---------+------+-------------------------------------------+
+ * </pre>
  *
  * See OptionROMConstants for possible EFI Subsystem and Machine Type values.
  *

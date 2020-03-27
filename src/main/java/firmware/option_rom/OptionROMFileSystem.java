@@ -87,6 +87,7 @@ public class OptionROMFileSystem implements GFileSystem {
 			provider.close();
 			provider = null;
 		}
+
 		fsih.clear();
 	}
 

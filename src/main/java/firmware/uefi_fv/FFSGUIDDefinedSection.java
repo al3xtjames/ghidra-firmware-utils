@@ -60,11 +60,11 @@ public class FFSGUIDDefinedSection extends FFSSection {
 
 	/**
 	 * Constructs a FFSGUIDDefinedSection from a specified BinaryReader and adds it to a specified
-	 * UEFIFirmwareVolumeFileSystem.
+	 * FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
 	public FFSGUIDDefinedSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
 			throws IOException {
@@ -129,12 +129,12 @@ public class FFSGUIDDefinedSection extends FFSSection {
 
 	/**
 	 * Parses all nested sections within a GUID-defined section and adds them to a specified
-	 * UEFIFirmwareVolumeFileSystem.
+	 * FileSystemIndexHelper.
 	 *
 	 * @param reader the BinaryReader for reading the current GUID-defined section
 	 * @param length the length of the current GUID-defined section
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
 	private static void parseNestedSections(BinaryReader reader, long length,
 			FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {

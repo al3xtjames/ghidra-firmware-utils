@@ -27,6 +27,7 @@ import java.io.IOException;
  * flash map header. Note that the flash map header is not required to be at the start of the
  * firmware binary.
  *
+ * <pre>
  *   Flash Map Header
  *   +----------+------+-------------------------+
  *   | Type     | Size | Description             |
@@ -39,6 +40,7 @@ import java.io.IOException;
  *   | char[32] |   32 | Name of Firmware Binary |
  *   | u16      |    2 | Number of flash areas   |
  *   +----------+------+-------------------------+
+ * </pre>
  *
  * The flash area structures immediately follow the flash map header. See FlashMapArea for a
  * description of the fields.

@@ -77,6 +77,7 @@ public class FlashMapFileSystem implements GFileSystem {
 			provider.close();
 			provider = null;
 		}
+
 		fsih.clear();
 	}
 

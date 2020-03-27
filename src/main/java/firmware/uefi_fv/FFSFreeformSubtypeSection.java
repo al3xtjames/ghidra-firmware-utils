@@ -29,12 +29,14 @@ import ghidra.formats.gfilesystem.GFile;
 /**
  * Parser for FFS freeform sections, which have the following specific field:
  *
+ * <pre>
  *   UEFI FFS UI Section Header
  *   +------------+------+--------------+
  *   | Type       | Size | Description  |
  *   +------------+------+--------------+
  *   | efi_guid_t |   16 | Subtype GUID |
  *   +------------+------+--------------+
+ * </pre>
  *
  * This header follows the common section header. See FFSSection for additional information.
  */
@@ -45,11 +47,11 @@ public class FFSFreeformSubtypeSection extends FFSSection {
 
 	/**
 	 * Constructs a FFSFreeformSubtypeSection from a specified BinaryReader and adds it to a
-	 * specified UEFIFirmwareVolumeFileSystem.
+	 * specified FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
 	public FFSFreeformSubtypeSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
 			throws IOException {

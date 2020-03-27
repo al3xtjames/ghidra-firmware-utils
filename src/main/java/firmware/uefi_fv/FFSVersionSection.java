@@ -48,11 +48,11 @@ public class FFSVersionSection extends FFSSection {
 
 	/**
 	 * Constructs a FFSVersionSection from a specified BinaryReader and adds it to a specified
-	 * UEFIFirmwareVolumeFileSystem.
+	 * FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fsih {@link FileSystemIndexHelper} that handles files
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 * @throws IOException
 	 */
 	public FFSVersionSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih,

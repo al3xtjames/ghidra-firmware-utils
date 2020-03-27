@@ -25,6 +25,7 @@ import java.io.IOException;
  * Parser for CBFS file compression attributes, which are CBFS file attributes with the compression
  * tag. The structure is as follows:
  *
+ * <pre>
  *   CBFS File Compression Attribute
  *   +------+------+------------------------------------------------+
  *   | Type | Size | Description                                    |
@@ -34,6 +35,7 @@ import java.io.IOException;
  *   | u32  |    4 | Compression Type                               |
  *   | u32  |    4 | Uncompressed Size                              |
  *   +------+------+------------------------------------------------+
+ * </pre>
  *
  * See CBFSConstants.CompressionAlgorithm for possible Compression Type values.
  */

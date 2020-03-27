@@ -56,11 +56,11 @@ public class FFSUISection extends FFSSection {
 
 	/**
 	 * Constructs a FFSUISection from a specified BinaryReader and adds it to a specified
-	 * UEFIFirmwareVolumeFileSystem.
+	 * FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
 	public FFSUISection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {
 		this(reader);

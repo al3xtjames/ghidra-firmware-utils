@@ -32,6 +32,7 @@ import ghidra.util.Msg;
  *
  * The IFD header (placed at the start of the IFD) contains the following fields:
  *
+ * <pre>
  *   Intel Flash Descriptor Header
  *   +--------+------+---------------------------------------+
  *   | Type   | Size | Description                           |
@@ -39,10 +40,12 @@ import ghidra.util.Msg;
  *   | u8[16] |   16 | Reset Vector (0xFF bytes)             |
  *   | u32    |    4 | Signature (0x0FF0A55A, little endian) |
  *   +--------+------+---------------------------------------+
+ * </pre>
  *
  * This is immediately followed by the flash descriptor map. This parser only handles FLMAP0, which
  * has the following bit fields:
  *
+ * <pre>
  *   FLMAP0
  *   +------+--------------------------------+
  *   | Bits | Description                    |
@@ -54,12 +57,14 @@ import ghidra.util.Msg;
  *   |    3 | Number of Regions              |
  *   |    5 | Reserved                       |
  *   +------+--------------------------------+
+ * </pre>
  *
  * The component/region section base addresses are truncated; multiply them by 0x10 to get the
  * actual section base address.
  *
  * The component section begins with the following bit fields (describing the flash parameters):
  *
+ * <pre>
  *   Intel Flash Parameters
  *   +------+---------------------------------+
  *   | Bits | Description                     |
@@ -74,12 +79,14 @@ import ghidra.util.Msg;
  *   |    3 | Flash Read Status Frequency     |
  *   |    1 | Dual Output Fast Read Supported |
  *   +------+---------------------------------+
+ * </pre>
  *
  * See IntelFlashDescriptorConstants.FlashFrequency for some possible Read Frequency values. This
  * field can be used to determine the IFD version - IFD v1 always has a read frequency of 20 MHz.
  *
  * The region section contains the base address and length for each flash region:
  *
+ * <pre>
  *   Region Component Section
  *   +------+------+------------------------------------------------------------+
  *   | Type | Size | Description                                                |
@@ -117,6 +124,7 @@ import ghidra.util.Msg;
  *   | u16  |    2 | Platform Trust Technology Base Address (IFD v2 only)       |
  *   | u16  |    2 | Platform Trust Technology Limit Address (IFD v2 only)      |
  *   +------+------+------------------------------------------------------------+
+ * </pre>
  *
  * Each region's base address is truncated; multiply the value by 0x1000 to get the actual base
  * address. The same applies for the limit address.

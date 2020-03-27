@@ -41,7 +41,6 @@ public class CBFSFileSystem implements GFileSystem {
 	}
 
 	public void mount(ByteProvider provider, TaskMonitor monitor) throws IOException, CancelledException {
-
 		this.provider = provider;
 		BinaryReader reader = new BinaryReader(provider, false);
 
@@ -99,6 +98,7 @@ public class CBFSFileSystem implements GFileSystem {
 			provider.close();
 			provider = null;
 		}
+
 		fsih.clear();
 	}
 

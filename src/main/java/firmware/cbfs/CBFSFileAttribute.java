@@ -23,6 +23,7 @@ import java.io.IOException;
 /**
  * Parser for CBFS file attributes, which have the following structure:
  *
+ * <pre>
  *   CBFS File Attribute
  *   +------+------+------------------------------------------------+
  *   | Type | Size | Description                                    |
@@ -31,6 +32,7 @@ import java.io.IOException;
  *   | u32  |    4 | Attribute Size (including Tag and Size fields) |
  *   | u8[] |  var | Attribute Data (depends on Tag)                |
  *   +------+------+------------------------------------------------+
+ * </pre>
  *
  * The Attribute Tag field is used to determine the attribute type; the contents of the Attribute
  * Data field are dependent on the attribute type. See CBFSConstants.AttributeTag for possible code

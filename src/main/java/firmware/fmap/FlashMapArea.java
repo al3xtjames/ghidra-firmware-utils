@@ -26,6 +26,7 @@ import java.util.Formatter;
 /**
  * Parser for flash areas, which have the following structure:
  *
+ * <pre>
  *   Flash Map Header
  *   +----------+------+-------------------------------------------------------+
  *   | Type     | Size | Description                                           |
@@ -35,6 +36,7 @@ import java.util.Formatter;
  *   | char[32] |   32 | Name of Flash Area                                    |
  *   | u16      |    2 | Flash Area Flags                                      |
  *   +----------+------+-------------------------------------------------------+
+ * </pre>
  *
  * See FlashMapConstants.AreaFlags for possible Flash Area Flags.
  */

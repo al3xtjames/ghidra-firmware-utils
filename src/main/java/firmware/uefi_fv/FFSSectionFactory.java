@@ -49,11 +49,11 @@ public class FFSSectionFactory {
 
 	/**
 	 * Constructs a FFSSection from a specified BinaryReader by checking the type field in the
-	 * common FFS section header, and adds it to the specified UEFIFirmwareVolumeFileSystem.
+	 * common FFS section header, and adds it to the specified FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 * @return       the parsed FFSSection
 	 */
 	public static FFSSection parseSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)

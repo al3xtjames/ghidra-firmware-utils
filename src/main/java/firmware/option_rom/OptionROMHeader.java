@@ -34,6 +34,7 @@ import java.util.Formatter;
  * A PCI expansion ROM may contain more than one image. Each image will contain the following
  * structures:
  *
+ * <pre>
  *   ROM Header
  *   +---------+------+-------------------------------------------------------------------+
  *   | Type    | Size | Description                                                       |
@@ -62,6 +63,7 @@ import java.util.Formatter;
  *   | u16     |    2 | Configuration Utility Code Offset (only for rev 3)                |
  *   | u16     |    2 | DMTF CLP Entry Point Offset (only for rev 3)                      |
  *   +---------+------+-------------------------------------------------------------------+
+ * </pre>
  *
  * The ROM header must begin at the start of the each image's address space. The PCI Data
  * Structure Offset field in the ROM header is used to locate the PCI data structure. The PCI data

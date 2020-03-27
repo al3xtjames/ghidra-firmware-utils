@@ -65,11 +65,11 @@ public class UEFIFFSFile implements UEFIFile {
 
 	/**
 	 * Constructs a UEFIFFSFile from a specified BinaryReader and adds it to a
-	 * specified UEFIFirmwareVolumeFileSystem.
+	 * specified FileSystemIndexHelper.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs	 the specified UEFIFirmwareVolumeFileSystem
-	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
+	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
+	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
 	public UEFIFFSFile(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {
 		baseIndex = reader.getPointerIndex();
