@@ -16,67 +16,44 @@
 
 package firmware.option_rom;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.ByteArrayProvider;
-import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.*;
-import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
-import ghidra.formats.gfilesystem.factory.GFileSystemBaseFactory;
-import ghidra.util.task.TaskMonitor;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
-@FileSystemInfo(type = "pcir", description = "PCI Option ROM", factory = GFileSystemBaseFactory.class)
-public class OptionROMFileSystem extends GFileSystemBase {
-	private HashMap<GFile, OptionROMHeader> map;
+import ghidra.app.util.bin.*;
+import ghidra.formats.gfilesystem.*;
+import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 
-	public OptionROMFileSystem(String fileSystemName, ByteProvider provider) {
-		super(fileSystemName, provider);
-		map = new HashMap<>();
+@FileSystemInfo(type = "pcir", description = "PCI Option ROM", factory = OptionROMFileSystemFactory.class)
+public class OptionROMFileSystem implements GFileSystem {
+	private final FSRLRoot fsFSRL;
+	private FileSystemIndexHelper<OptionROMHeader> fsih;
+	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private ByteProvider provider;
+
+	public OptionROMFileSystem(FSRLRoot fsFSRL) {
+		this.fsFSRL = fsFSRL;
+		this.fsih = new FileSystemIndexHelper<>(this, fsFSRL);
 	}
 
-	@Override
-	public boolean isValid(TaskMonitor monitor) throws IOException {
-		byte[] signature = provider.readBytes(0, 2);
-		if (!Arrays.equals(signature, OptionROMConstants.ROM_SIGNATURE_BYTES)) {
-			return false;
-		}
-
-		try {
-			// Ignore option ROMs that contain a single legacy x86 image; those should be loaded
-			// directly by LegacyOptionROMLoader.
-			BinaryReader reader = new BinaryReader(provider, true);
-			LegacyOptionROMHeader header = new LegacyOptionROMHeader(reader);
-			// This is needed to avoid treating nested images (e.g. a legacy image in an open
-			// hybrid expansion ROM filesystem) as an identical ROM filesystem.
-			return header.getPCIRHeader().getImageLength() != provider.length();
-		} catch (IOException e) {}
-
-		return true;
-	}
-
-	@Override
-	public void open(TaskMonitor monitor) throws IOException {
+	public void mount(ByteProvider provider, TaskMonitor monitor) throws IOException {
+		this.provider = provider;
 		int imageOffset = 0;
 		while (true) {
 			// Read each subsequent image and add it to the map (until the last image is read).
-			byte[] bytes = provider.readBytes(imageOffset, provider.length());
-			BinaryReader reader = new BinaryReader(new ByteArrayProvider(bytes), true);
+			ByteProviderWrapper imageProvider =
+					new ByteProviderWrapper(provider, imageOffset, provider.length() - imageOffset);
+			BinaryReader reader = new BinaryReader(imageProvider, true);
 			OptionROMHeader header = OptionROMHeaderFactory.parseOptionROM(reader);
 			PCIDataStructureHeader pcirHeader = header.getPCIRHeader();
 			imageOffset += pcirHeader.getImageLength();
 
-			String filename = String.format("Image %d: %s", map.size() + 1,
-					OptionROMConstants.CodeType.toString(pcirHeader.getCodeType()));
-			GFileImpl file = GFileImpl.fromPathString(this, root, filename, null, false,
-					pcirHeader.getImageLength());
-
-			map.put(file, header);
+			String filename = String.format("Image %d: %s", fsih.getFileCount() + 1,
+				OptionROMConstants.CodeType.toString(pcirHeader.getCodeType()));
+			fsih.storeFileWithParent(filename, null, -1, false, pcirHeader.getImageLength(),
+				header);
 			if (pcirHeader.isLastImage()) {
 				break;
 			}
@@ -84,47 +61,54 @@ public class OptionROMFileSystem extends GFileSystemBase {
 	}
 
 	@Override
-	public void close() throws IOException {
-		super.close();
-		map.clear();
+	public String getName() {
+		return fsFSRL.getContainer().getName();
 	}
 
 	@Override
-	protected InputStream getData(GFile file, TaskMonitor monitor) {
-		OptionROMHeader entry = map.get(file);
-		return entry.getImageStream();
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
+	}
+
+	@Override
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public FileSystemRefManager getRefManager() {
+		return refManager;
+	}
+
+	@Override
+	public void close() throws IOException {
+		refManager.onClose();
+		if (provider != null) {
+			provider.close();
+			provider = null;
+		}
+		fsih.clear();
 	}
 
 	@Override
 	public String getInfo(GFile file, TaskMonitor monitor) {
-		OptionROMHeader entry = map.get(file);
-		return entry.toString();
+		OptionROMHeader entry = fsih.getMetadata(file);
+		return (entry != null) ? entry.toString() : null;
 	}
 
 	@Override
 	public List<GFile> getListing(GFile directory) {
-		if (directory == null || directory.equals(root)) {
-			ArrayList<GFile> roots = new ArrayList<>();
-			for (GFile file : map.keySet()) {
-				if (file.getParentFile() == root || file.getParentFile().equals(root)) {
-					roots.add(file);
-				}
-			}
+		return fsih.getListing(directory);
+	}
 
-			return roots;
-		}
+	@Override
+	public GFile lookup(String path) throws IOException {
+		return fsih.lookup(path);
+	}
 
-		ArrayList<GFile> tmp = new ArrayList<>();
-		for (GFile file : map.keySet()) {
-			if (file.getParentFile() == null) {
-				continue;
-			}
-
-			if (file.getParentFile().equals(directory)) {
-				tmp.add(file);
-			}
-		}
-
-		return tmp;
+	@Override
+	public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
+		OptionROMHeader entry = fsih.getMetadata(file);
+		return entry.getImageStream();
 	}
 }

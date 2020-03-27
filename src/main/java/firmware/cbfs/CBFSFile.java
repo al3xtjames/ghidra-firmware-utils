@@ -16,15 +16,16 @@
 
 package firmware.cbfs;
 
-import ghidra.app.util.bin.BinaryReader;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Formatter;
 
 import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
+
+import ghidra.app.util.bin.BinaryReader;
 
 /**
  * Parser for CBFS files, which have the following structure:
@@ -48,7 +49,7 @@ import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
  */
 public class CBFSFile {
 	// Original header fields
-	private String signature;
+	private byte[] signature;
 	private int size;
 	private int type;
 	private long attributesOffset;
@@ -65,8 +66,9 @@ public class CBFSFile {
 	 */
 	public CBFSFile(BinaryReader reader) throws IOException {
 		long startIndex = reader.getPointerIndex();
-		signature = reader.readNextAsciiString(CBFSConstants.CBFS_FILE_SIGNATURE.length());
-		if (!signature.equals(CBFSConstants.CBFS_FILE_SIGNATURE)) {
+
+		signature = reader.readNextByteArray(CBFSConstants.CBFS_FILE_SIGNATURE.length);
+		if (!Arrays.equals(CBFSConstants.CBFS_FILE_SIGNATURE, signature)) {
 			throw new IOException("Not a valid CBFS file");
 		}
 
@@ -146,6 +148,7 @@ public class CBFSFile {
 		return size;
 	}
 
+	@Override
 	public String toString() {
 		Formatter formatter = new Formatter();
 		formatter.format("CBFS file name: %s\n", name);

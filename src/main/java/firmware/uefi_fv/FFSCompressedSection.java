@@ -16,22 +16,23 @@
 
 package firmware.uefi_fv;
 
+import java.io.*;
+import java.util.Formatter;
+
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
+
 import firmware.common.EFIDecompressor;
 import firmware.common.TianoDecompressor;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
 import ghidra.util.Msg;
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Formatter;
 
 /**
  * Parser for compressed FFS sections, which have the following fields:
  *
+ * <pre>
  *   UEFI Compressed Section Header
  *   +------+------+-------------------+
  *   | Type | Size | Description       |
@@ -39,10 +40,11 @@ import java.util.Formatter;
  *   | u32  |    4 | Uncompressed Size |
  *   | u8   |    1 | Compression Type  |
  *   +------+------+-------------------+
+ * </pre>
  *
  * The header follows the common section header. See FFSSection for additional information. The
  * compressed data immediately follows the compressed section header.
- *
+ * <p>
  * A Compression Type value of 0x01 (STANDARD_COMPRESSION) indicates that the section is compressed
  * with the EFI Compression Algorithm or the Tiano Compression Algorithm.
  */
@@ -61,7 +63,7 @@ public class FFSCompressedSection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSCompressedSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
+	public FFSCompressedSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih,
 			GFile parent) throws IOException {
 		super(reader);
 
@@ -106,12 +108,11 @@ public class FFSCompressedSection extends FFSSection {
 		}
 
 		// Add this section to the FS.
-		GFile fileImpl = fs.addFile(parent, this, getName(), true);
+		GFile fileImpl = fsih.storeFileWithParent(getName(), parent, -1, true, -1, this);
 
 		// Add the uncompressed section to the FS as a file.
-		BinaryReader sectionReader = new BinaryReader(
-				new ByteArrayProvider(uncompressedData), true);
-		FFSSection section = FFSSectionFactory.parseSection(sectionReader, fs, fileImpl);
+		BinaryReader sectionReader = new BinaryReader(new ByteArrayProvider(uncompressedData), true);
+		FFSSection section = FFSSectionFactory.parseSection(sectionReader, fsih, fileImpl);
 	}
 
 	/**
@@ -176,7 +177,7 @@ public class FFSCompressedSection extends FFSSection {
 		formatter.format("%s\n", super.toString());
 		formatter.format("Uncompressed size: 0x%X\n", uncompressedSize);
 		formatter.format("Compression type: %s (0x%X)",
-				UEFIFFSConstants.CompressionType.toString(compressionType), compressionType);
+			UEFIFFSConstants.CompressionType.toString(compressionType), compressionType);
 		return formatter.toString();
 	}
 }

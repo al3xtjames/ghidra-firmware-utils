@@ -16,20 +16,25 @@
 
 package firmware.uefi_fv;
 
-import firmware.common.UUIDUtils;
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.util.Msg;
-
 import java.io.IOException;
 import java.util.Formatter;
 import java.util.UUID;
 
+import firmware.common.UUIDUtils;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
+import ghidra.util.Msg;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
+
 /**
  * Parser for UEFI Firmware Volumes.
- *
+ * <p>
  * UEFI firmware volumes begin with the following header:
  *
+ * <pre>
  *   UEFI Firmware Volume Header
  *   +-----------------------+------+-------------------------------------------------------------+
  *   | Type                  | Size | Description                                                 |
@@ -45,10 +50,12 @@ import java.util.UUID;
  *   | u8                    |    1 | Reserved                                                    |
  *   | u8                    |    1 | Revision                                                    |
  *   | efi_fv_block_map_t[2] |   16 | Block Map                                                   |
- *   +--------------------+------+----------------------------------------------------------------+
+ *   +-----------------------+------+-------------------------------------------------------------+
+ * </pre>
  *
  * The Block Map field is unused by this parser. It has the following structure:
  *
+ * <pre>
  *   UEFI Firmware Volume Block Map
  *   +------+------+------------------+
  *   | Type | Size | Description      |
@@ -56,10 +63,11 @@ import java.util.UUID;
  *   | u32  |    4 | Number of Blocks |
  *   | u32  |    4 | Block Size       |
  *   +------+------+------------------+
+ * </pre>
  *
- * The Extended Header Offset field is relative to the start of firmware volume header; it has the
- * following structure:
+ * The Extended Header Offset field is relative to the start of firmware volume header; it has the following structure:
  *
+ * <pre>
  *   UEFI Firmware Volume Extended Header
  *   +------------+------+----------------------+
  *   | Type       | Size | Description          |
@@ -67,17 +75,59 @@ import java.util.UUID;
  *   | efi_guid_t |   16 | Firmware Volume Name |
  *   | u32        |    4 | Extended Header Size |
  *   +------------+------+----------------------+
+ * </pre>
  *
- * Each firmware volume contains a number of UEFI Firmware File System (FFS) files, which may be
- * aligned depending on the bits set in the Attributes field of the UEFI Firmware Volume header.
+ * Each firmware volume contains a number of UEFI Firmware File System (FFS) files, which may be aligned depending on
+ * the bits set in the Attributes field of the UEFI Firmware Volume header.
+ * <p>
  * See UFSIFFSFile and UEFIFFSv3File for information regarding the FFS file header fields.
  */
 public class UEFIFirmwareVolumeHeader implements UEFIFile {
+
+	/**
+	 * Finds the position of the next UEFIFirmwareVolumeHeader.
+	 *
+	 * @param provider {@link ByteProvider} to read
+	 * @param startOffset offset (inclusive) to start scanning at
+	 * @return position of the start of the found {@link UEFIFirmwareVolumeHeader}, or -1 if not found
+	 * @throws IOException if IO error
+	 * @throws CancelledException
+	 */
+	public static long findNext(ByteProvider provider, long startOffset, TaskMonitor monitor)
+			throws IOException, CancelledException {
+		BinaryReader reader = new BinaryReader(provider, true);
+		reader.setPointerIndex(startOffset);
+		long eofPos = provider.length() - UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE_LEN;
+		long signaturePosition;
+		while ((signaturePosition = reader.getPointerIndex()) < eofPos) {
+			monitor.checkCanceled();
+			monitor.setProgress(signaturePosition);
+
+			int signature = reader.readNextInt();
+			if (signaturePosition > SIGNATURE_OFFSET &&
+					signature == UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE_LE) {
+				long endOfHeader = signaturePosition - SIGNATURE_OFFSET +
+						UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE;
+				if (endOfHeader >= provider.length()) {
+					return -1;
+				}
+
+				Msg.debug(UEFIFirmwareVolumeHeader.class,
+					String.format("Found _FVH signature at 0x%X", signaturePosition));
+				return signaturePosition - SIGNATURE_OFFSET;
+			}
+		}
+
+		return -1;
+	}
+
+	private static final int SIGNATURE_OFFSET = 40;
+
 	// Original header fields
 	private byte[] zeroVector;
 	private UUID fileSystemGuid;
 	private long size;
-	private String signature;
+	private int signature;
 	private int attributes;
 	private short headerSize;
 	private short checksum;
@@ -91,14 +141,14 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	private long baseIndex;
 
 	/**
-	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader and adds it to a
-	 * specified UEFIFirmwareVolumeFileSystem.
+	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader and adds it to a specified
+	 * UEFIFirmwareVolumeFileSystem.
 	 *
 	 * @param reader the specified BinaryReader
-	 * @param fs	 the specified UEFIFirmwareVolumeFileSystem
+	 * @param fs the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public UEFIFirmwareVolumeHeader(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
+	public UEFIFirmwareVolumeHeader(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih,
 			GFile parent, boolean nested) throws IOException {
 		baseIndex = reader.getPointerIndex();
 		zeroVector = reader.readNextByteArray(16);
@@ -109,9 +159,8 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 			throw new IOException("Not a valid UEFI FV header");
 		}
 
-		signature = reader.readNextAsciiString(
-				UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE.length());
-		if (!signature.equals(UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE)) {
+		signature = reader.readNextInt();
+		if (signature != UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE_LE) {
 			throw new IOException("Not a valid UEFI FV Header");
 		}
 
@@ -139,9 +188,12 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 		int alignment = 8;
 		if (revision == 1) {
 			alignment = 1 << ((attributes & UEFIFirmwareVolumeConstants.Attributes.ALIGNMENT));
-		} else if (revision == 2) {
-			alignment = 1 << ((attributes & UEFIFirmwareVolumeConstants.AttributesV2.ALIGNMENT) >> 16);
-		} else {
+		}
+		else if (revision == 2) {
+			alignment =
+					1 << ((attributes & UEFIFirmwareVolumeConstants.AttributesV2.ALIGNMENT) >> 16);
+		}
+		else {
 			Msg.warn(this, "Unknown FV header revision: " + revision);
 		}
 
@@ -150,13 +202,16 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 		}
 
 		// Add this firmware volume as a subdirectory in the current FS.
-		GFile fileImpl = fs.addFile(parent, this, true);
+		GFile fileImpl = fsih.storeFileWithParent(
+			UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1, true,
+			-1, this);
 
 		// Ignore NVRAM volumes - add the contents as a raw file, and skip FFS file parsing.
 		if (fileSystemGuid.equals(UEFIFirmwareVolumeConstants.EFI_SYSTEM_NV_DATA_FV_GUID)) {
 			new FFSRawFile(reader, (int) size - UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE,
-					fs, fileImpl);
-		} else {
+				fsih, fileImpl);
+		}
+		else {
 			// Read the files in the current firmware volume.
 			while (reader.getPointerIndex() < baseIndex + size) {
 				if (nested) {
@@ -165,14 +220,16 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 					reader.setPointerIndex(reader.getPointerIndex() - baseIndex);
 					reader.align(8);
 					reader.setPointerIndex(reader.getPointerIndex() + baseIndex);
-				} else {
+				}
+				else {
 					// FFS files within a firmware volume are aligned to an 8 byte boundary.
 					reader.align(8);
 				}
 
 				try {
-					UEFIFFSFile file = new UEFIFFSFile(reader, fs, fileImpl);
-				} catch (IOException e) {
+					UEFIFFSFile file = new UEFIFFSFile(reader, fsih, fileImpl);
+				}
+				catch (IOException e) {
 					break;
 				}
 			}
@@ -187,6 +244,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	 *
 	 * @return the name of the current firmware volume
 	 */
+	@Override
 	public String getName() {
 		if (fvName != null) {
 			return UUIDUtils.getName(fvName);
@@ -200,6 +258,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	 *
 	 * @return the length of the current firmware volume
 	 */
+	@Override
 	public long length() {
 		return size;
 	}

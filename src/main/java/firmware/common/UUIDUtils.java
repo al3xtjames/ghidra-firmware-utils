@@ -37,10 +37,11 @@ public class UUIDUtils {
 		try {
 			// Read the list of GUIDs to populate the GUID database.
 			File guidDbFile = Application.getModuleDataFile("guids.csv").getFile(true);
-			BufferedReader reader = new BufferedReader(new FileReader(guidDbFile));
-			for (String line; (line = reader.readLine()) != null; ) {
-				String[] parsedLine = line.split(",");
-				guidMap.put(UUID.fromString(parsedLine[0]), parsedLine[1]);
+			try (BufferedReader reader = new BufferedReader(new FileReader(guidDbFile))) {
+				for (String line; (line = reader.readLine()) != null;) {
+					String[] parsedLine = line.split(",");
+					guidMap.put(UUID.fromString(parsedLine[0]), parsedLine[1]);
+				}
 			}
 
 			Msg.debug(UUIDUtils.class, "Imported " + guidMap.size() + " GUIDs");

@@ -16,24 +16,27 @@
 
 package firmware.uefi_fv;
 
-import firmware.common.EFIDecompressor;
-import firmware.common.TianoDecompressor;
-import firmware.common.UUIDUtils;
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.ByteArrayProvider;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.util.BoundedInputStream;
-import ghidra.util.Msg;
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
 import java.util.UUID;
 
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
+
+import firmware.common.EFIDecompressor;
+import firmware.common.TianoDecompressor;
+import firmware.common.UUIDUtils;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
+import ghidra.util.BoundedInputStream;
+import ghidra.util.Msg;
+
 /**
  * Parser for FFS GUID-defined sections, which have the following specific fields:
  *
+ * <pre>
  *   UEFI FFS GUID-Defined Section Header
  *   +------------+------+-------------------------+
  *   | Type       | Size | Description             |
@@ -42,10 +45,12 @@ import java.util.UUID;
  *   | u16        |    2 | Data Offset             |
  *   | u16        |    2 | Attributes              |
  *   +------------+------+-------------------------+
+ * </pre>
  *
  * This header follows the common section header. See FFSSection for additional information.
- * Depending on the Section Definition GUID and the bits set in the Attributes field, the data
- * may be compressed or require other processing.
+ * <p>
+ * Depending on the Section Definition GUID and the bits set in the Attributes field, the data may be compressed or
+ * require other processing.
  */
 public class FFSGUIDDefinedSection extends FFSSection {
 	// Original header fields
@@ -61,8 +66,8 @@ public class FFSGUIDDefinedSection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSGUIDDefinedSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-								 GFile parent) throws IOException {
+	public FFSGUIDDefinedSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		super(reader);
 
 		long baseIndex = reader.getPointerIndex() - UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
@@ -71,7 +76,7 @@ public class FFSGUIDDefinedSection extends FFSSection {
 		attributes = reader.readNextShort();
 
 		// Add this file to the FS.
-		GFile fileImpl = fs.addFile(parent, this, getName(), true);
+		GFile fileImpl = fsih.storeFileWithParent(getName(), parent, -1, true, -1, this);
 
 		// Try to extract compressed sections.
 		reader.setPointerIndex(baseIndex + dataOffset);
@@ -93,12 +98,12 @@ public class FFSGUIDDefinedSection extends FFSSection {
 
 			// Parse the uncompressed section.
 			BinaryReader sectionReader = new BinaryReader(
-				new ByteArrayProvider(uncompressedData), true);
-			parseNestedSections(sectionReader, uncompressedData.length, fs, fileImpl);
+					new ByteArrayProvider(uncompressedData), true);
+			parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
 		} else if (sectionDefinitionGuid.equals(UEFIFFSConstants.LZMA_COMPRESS_GUID)) {
 			BoundedInputStream boundedStream = new BoundedInputStream(
-				reader.getByteProvider().getInputStream(reader.getPointerIndex()),
-				length());
+					reader.getByteProvider().getInputStream(reader.getPointerIndex()),
+					length());
 
 			try {
 				LZMACompressorInputStream inputStream = new LZMACompressorInputStream(boundedStream);
@@ -106,8 +111,8 @@ public class FFSGUIDDefinedSection extends FFSSection {
 
 				// Parse the uncompressed section.
 				BinaryReader sectionReader = new BinaryReader(
-					new ByteArrayProvider(uncompressedData), true);
-				parseNestedSections(sectionReader, uncompressedData.length, fs, fileImpl);
+						new ByteArrayProvider(uncompressedData), true);
+				parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
 			} catch (IOException e) {
 				Msg.error(this, "Failed to extract LZMA compressed section: " +
 						e.getMessage());
@@ -116,7 +121,7 @@ public class FFSGUIDDefinedSection extends FFSSection {
 			}
 		} else {
 			// Parse the data in the current GUID-defined section.
-			parseNestedSections(reader, length(), fs, fileImpl);
+			parseNestedSections(reader, length(), fsih, fileImpl);
 		}
 
 		reader.setPointerIndex(baseIndex + getTotalLength());
@@ -132,17 +137,17 @@ public class FFSGUIDDefinedSection extends FFSSection {
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
 	private static void parseNestedSections(BinaryReader reader, long length,
-			UEFIFirmwareVolumeFileSystem fs, GFile parent) throws IOException {
+			FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {
 		long baseIndex = reader.getPointerIndex();
 		long maxIndex = baseIndex + length;
 		long currentIndex = baseIndex;
 		while (currentIndex < maxIndex) {
 			// Try to parse each FFS section.
 			try {
-				FFSSectionFactory.parseSection(reader, fs, parent);
+				FFSSectionFactory.parseSection(reader, fsih, parent);
 			} catch (IOException e) {
 				reader.setPointerIndex(currentIndex);
-				new FFSRawFile(reader, (int) (maxIndex - currentIndex), fs, parent);
+				new FFSRawFile(reader, (int) (maxIndex - currentIndex), fsih, parent);
 			}
 
 			reader.align(4);

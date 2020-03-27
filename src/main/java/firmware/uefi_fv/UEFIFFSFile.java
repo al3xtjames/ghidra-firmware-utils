@@ -16,14 +16,15 @@
 
 package firmware.uefi_fv;
 
-import firmware.common.UUIDUtils;
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.util.Msg;
-
 import java.io.IOException;
 import java.util.Formatter;
 import java.util.UUID;
+
+import firmware.common.UUIDUtils;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
+import ghidra.util.Msg;
 
 /**
  * Parser for UEFI Firmware File System (FFS) files, which have the following header:
@@ -70,8 +71,7 @@ public class UEFIFFSFile implements UEFIFile {
 	 * @param fs	 the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public UEFIFFSFile(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public UEFIFFSFile(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {
 		baseIndex = reader.getPointerIndex();
 		nameGuid = UUIDUtils.fromBinaryReader(reader);
 		headerChecksum = reader.readNextByte();
@@ -96,7 +96,7 @@ public class UEFIFFSFile implements UEFIFile {
 
 		// Ignore obviously invalid sections (free space).
 		if (nameGuid.equals(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff")) ||
-			nameGuid.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
+				nameGuid.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
 			throw new IOException("Not a valid FFS file");
 		}
 
@@ -128,23 +128,23 @@ public class UEFIFFSFile implements UEFIFile {
 		}
 
 		// Add this file to the current FS.
-		GFile fileImpl = fs.addFile(parent, this, true);
+		GFile fileImpl = fsih.storeFileWithParent(UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih),
+				parent, -1, true, -1, this);
 
 		if (type == UEFIFFSConstants.FileType.RAW) {
 			// Raw sections may contain a nested firmware volume.
 			long currentIndex = reader.getPointerIndex();
 			try {
-				new UEFIFirmwareVolumeHeader(reader, fs, fileImpl, true);
+				new UEFIFirmwareVolumeHeader(reader, fsih, fileImpl, true);
 			} catch (IOException e) {
 				reader.setPointerIndex(currentIndex);
-				new FFSRawFile(reader, (int) size - UEFIFFSConstants.FFS_HEADER_SIZE, fs,
-						fileImpl);
+				new FFSRawFile(reader, (int) size - UEFIFFSConstants.FFS_HEADER_SIZE, fsih, fileImpl);
 			}
 		} else {
 			long remainingLength = size - UEFIFFSConstants.FFS_HEADER_SIZE;
 			// Parse and add each section to the FS.
 			while (remainingLength > UEFIFFSConstants.FFS_SECTION_HEADER_SIZE) {
-				FFSSection section = FFSSectionFactory.parseSection(reader, fs, fileImpl);
+				FFSSection section = FFSSectionFactory.parseSection(reader, fsih, fileImpl);
 				// FFS sections are aligned to a 4 byte boundary.
 				long unalignedIndex = reader.getPointerIndex();
 				reader.align(4);
@@ -168,6 +168,7 @@ public class UEFIFFSFile implements UEFIFile {
 	 *
 	 * @return the name of the current FFS file
 	 */
+	@Override
 	public String getName() {
 		// Use the UI section text (if present).
 		if (uiName != null) {
@@ -183,6 +184,7 @@ public class UEFIFFSFile implements UEFIFile {
 	 *
 	 * @return the length of the current FFS file
 	 */
+	@Override
 	public long length() {
 		return size;
 	}

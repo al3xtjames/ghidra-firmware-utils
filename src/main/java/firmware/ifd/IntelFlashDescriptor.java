@@ -16,15 +16,16 @@
 
 package firmware.ifd;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.util.Msg;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.compress.utils.BitInputStream;
+
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.util.Msg;
 
 /**
  * Parser for Intel Flash/Firmware Descriptors.
@@ -135,7 +136,7 @@ public class IntelFlashDescriptor {
 
 	private long headerOffset;
 	private int ifdVersion;
-	private ArrayList<IntelFlashRegion> regions;
+	private List<IntelFlashRegion> regions;
 
 	/**
 	 * Constructs an IntelFlashDescriptor from a specified BinaryReader.
@@ -266,7 +267,7 @@ public class IntelFlashDescriptor {
 	 *
 	 * @return the flash regions defined in the current flash descriptor
 	 */
-	public ArrayList<IntelFlashRegion> getRegions() {
+	public List<IntelFlashRegion> getRegions() {
 		return regions;
 	}
 

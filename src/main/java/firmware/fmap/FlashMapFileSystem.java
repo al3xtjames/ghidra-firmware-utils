@@ -16,106 +16,89 @@
 
 package firmware.fmap;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.formats.gfilesystem.GFileImpl;
-import ghidra.formats.gfilesystem.GFileSystemBase;
-import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
-import ghidra.formats.gfilesystem.factory.GFileSystemBaseFactory;
-import ghidra.util.Msg;
-import ghidra.util.task.TaskMonitor;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-@FileSystemInfo(type = "fmap", description = "Flash Map", factory = GFileSystemBaseFactory.class)
-public class FlashMapFileSystem extends GFileSystemBase {
-	private long offset;
-	private HashMap<GFile, FlashMapArea> map;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.*;
+import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 
-	public FlashMapFileSystem(String fileSystemName, ByteProvider provider) {
-		super(fileSystemName, provider);
-		offset = 0;
-		map = new HashMap<>();
+@FileSystemInfo(type = "fmap", description = "Flash Map", factory = FlashMapFileSystemFactory.class)
+public class FlashMapFileSystem implements GFileSystem {
+	private final FSRLRoot fsFSRL;
+	private FileSystemIndexHelper<FlashMapArea> fsih;
+	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private ByteProvider provider;
+
+	public FlashMapFileSystem(FSRLRoot fsFSRL) {
+		this.fsFSRL = fsFSRL;
+		this.fsih = new FileSystemIndexHelper<>(this, fsFSRL);
 	}
 
-	@Override
-	public boolean isValid(TaskMonitor monitor) throws IOException {
-		long remainingLength = provider.length();
-		while (remainingLength >= FlashMapConstants.FMAP_SIGNATURE.length()) {
-			String signature = new String(provider.readBytes(offset,
-					FlashMapConstants.FMAP_SIGNATURE.length()));
-			if (signature.equals(FlashMapConstants.FMAP_SIGNATURE)) {
-				Msg.debug(this, String.format("Found FMAP signature at 0x%X", offset));
-				return true;
-			}
-
-			offset += FlashMapConstants.FMAP_SIGNATURE.length();
-			remainingLength -= FlashMapConstants.FMAP_SIGNATURE.length();
-		}
-
-		return false;
-	}
-
-	@Override
-	public void open(TaskMonitor monitor) throws IOException {
+	public void mount(ByteProvider provider, long offset, TaskMonitor monitor) throws IOException {
+		this.provider = provider;
 		BinaryReader reader = new BinaryReader(provider, true);
 		reader.setPointerIndex(offset);
 		FlashMapHeader header = new FlashMapHeader(reader);
 		FlashMapArea[] areas = header.getAreas();
 		for (FlashMapArea area : areas) {
-			GFileImpl file = GFileImpl.fromPathString(this, root, area.getName(), null, false,
-					area.length());
-			map.put(file, area);
+			fsih.storeFileWithParent(area.getName(), null, -1, false, area.length(), area);
 		}
+	}
+
+	@Override
+	public String getName() {
+		return fsFSRL.getContainer().getName();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
+	}
+
+	@Override
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
 
 	@Override
 	public void close() throws IOException {
-		super.close();
-		map.clear();
-	}
-
-	@Override
-	protected InputStream getData(GFile file, TaskMonitor monitor) {
-		FlashMapArea area = map.get(file);
-		return area.getData();
+		refManager.onClose();
+		if (provider != null) {
+			provider.close();
+			provider = null;
+		}
+		fsih.clear();
 	}
 
 	@Override
 	public String getInfo(GFile file, TaskMonitor monitor) {
-		FlashMapArea area = map.get(file);
-		return area.toString();
+		FlashMapArea area = fsih.getMetadata(file);
+		return (area != null) ? area.toString() : null;
 	}
 
 	@Override
 	public List<GFile> getListing(GFile directory) {
-		if (directory == null || directory.equals(root)) {
-			ArrayList<GFile> roots = new ArrayList<>();
-			for (GFile file : map.keySet()) {
-				if (file.getParentFile() == root || file.getParentFile().equals(root)) {
-					roots.add(file);
-				}
-			}
+		return fsih.getListing(directory);
+	}
 
-			return roots;
-		}
+	@Override
+	public GFile lookup(String path) throws IOException {
+		return fsih.lookup(path);
+	}
 
-		ArrayList<GFile> tmp = new ArrayList<>();
-		for (GFile file : map.keySet()) {
-			if (file.getParentFile() == null) {
-				continue;
-			}
-
-			if (file.getParentFile().equals(directory)) {
-				tmp.add(file);
-			}
-		}
-
-		return tmp;
+	@Override
+	public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
+		FlashMapArea area = fsih.getMetadata(file);
+		return area.getData();
 	}
 }

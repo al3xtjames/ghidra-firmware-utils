@@ -16,171 +16,112 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.GFile;
-import ghidra.formats.gfilesystem.GFileImpl;
-import ghidra.formats.gfilesystem.GFileSystemBase;
-import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
-import ghidra.formats.gfilesystem.factory.GFileSystemBaseFactory;
-import ghidra.util.Msg;
-import ghidra.util.task.TaskMonitor;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-@FileSystemInfo(type = "fv", description = "UEFI Firmware Volume", factory = GFileSystemBaseFactory.class)
-public class UEFIFirmwareVolumeFileSystem extends GFileSystemBase {
-	private long headerIndex;
-	private HashMap<GFile, UEFIFile> map;
-	private HashMap<GFile, Integer> numberOfFiles;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.*;
+import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 
-	public UEFIFirmwareVolumeFileSystem(String fileSystemName, ByteProvider provider) {
-		super(fileSystemName, provider);
-		headerIndex = 0;
-		map = new HashMap<>();
-		numberOfFiles = new HashMap<>();
+@FileSystemInfo(type = "fv", description = "UEFI Firmware Volume", factory = UEFIFirmwareVolumeFileSystemFactory.class)
+public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
+	private final FSRLRoot fsFSRL;
+	private FileSystemIndexHelper<UEFIFile> fsih;
+	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private ByteProvider provider;
+
+	public UEFIFirmwareVolumeFileSystem(FSRLRoot fsFSRL) {
+		this.fsFSRL = fsFSRL;
+		this.fsih = new FileSystemIndexHelper<>(this, fsFSRL);
 	}
 
-	@Override
-	public boolean isValid(TaskMonitor monitor) throws IOException {
-		return findNextFirmwareVolume();
-	}
+	public void mount(ByteProvider provider, TaskMonitor monitor)
+			throws IOException, CancelledException {
+		this.provider = provider;
+		monitor.initialize(provider.length());
+		monitor.setMessage("Mounting UEFI Firmware Volume");
 
-	@Override
-	public void open(TaskMonitor monitor) throws IOException {
 		BinaryReader reader = new BinaryReader(provider, true);
-		do {
+		long headerIndex = UEFIFirmwareVolumeHeader.findNext(provider, 0, monitor);
+		while (headerIndex != -1) {
 			// Add each firmware volume as a directory.
 			reader.setPointerIndex(headerIndex);
-			UEFIFirmwareVolumeHeader header = new UEFIFirmwareVolumeHeader(reader, this, root,
-					false);
-			headerIndex += header.length();
-		} while (findNextFirmwareVolume());
+			UEFIFirmwareVolumeHeader header =
+					new UEFIFirmwareVolumeHeader(reader, fsih, fsih.getRootDir(), false);
+			headerIndex =
+					UEFIFirmwareVolumeHeader.findNext(provider, headerIndex + header.length(), monitor);
+		}
+	}
+
+	@Override
+	public String getName() {
+		return fsFSRL.getContainer().getName();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
+	}
+
+	@Override
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
 
 	@Override
 	public void close() throws IOException {
-		super.close();
-		map.clear();
+		refManager.onClose();
+		if (provider != null) {
+			provider.close();
+			provider = null;
+		}
+		fsih.clear();
 	}
 
 	@Override
-	protected InputStream getData(GFile file, TaskMonitor monitor) {
-		UEFIFile fvFile = map.get(file);
+	public String getInfo(GFile file, TaskMonitor monitor) {
+		UEFIFile fvFile = fsih.getMetadata(file);
+		return (fvFile != null) ? fvFile.toString() : null;
+	}
+
+	@Override
+	public List<GFile> getListing(GFile directory) {
+		return fsih.getListing(directory);
+	}
+
+	@Override
+	public GFile lookup(String path) throws IOException {
+		return fsih.lookup(path);
+	}
+
+	@Override
+	public InputStream getInputStream(GFile file, TaskMonitor monitor)
+			throws IOException, CancelledException {
+		UEFIFile fvFile = fsih.getMetadata(file);
 		if (fvFile instanceof FFSSection) {
 			return ((FFSSection) fvFile).getData();
-		} else if (fvFile instanceof FFSRawFile) {
+		}
+		else if (fvFile instanceof FFSRawFile) {
 			return ((FFSRawFile) fvFile).getData();
 		}
 
 		return null;
 	}
 
-	@Override
-	public String getInfo(GFile file, TaskMonitor monitor) {
-		UEFIFile fvFile = map.get(file);
-		return fvFile.toString();
+	public static String getFSFormattedName(UEFIFile file, GFile parent,
+			FileSystemIndexHelper<UEFIFile> fsih) {
+		int fileCount = fsih.getListing(parent).size();
+		String typeStr = (file instanceof UEFIFirmwareVolumeHeader) ? "Volume" : "File";
+		return String.format("%s %03d - %s", typeStr, fileCount, file.getName());
 	}
 
-	@Override
-	public List<GFile> getListing(GFile directory) {
-		if (directory == null || directory.equals(root)) {
-			ArrayList<GFile> roots = new ArrayList<>();
-			for (GFile file : map.keySet()) {
-				if (file.getParentFile() == root || file.getParentFile().equals(root)) {
-					roots.add(file);
-				}
-			}
-
-			return roots;
-		}
-
-		ArrayList<GFile> tmp = new ArrayList<>();
-		for (GFile file : map.keySet()) {
-			if (file.getParentFile() == null) {
-				continue;
-			}
-
-			if (file.getParentFile().equals(directory)) {
-				tmp.add(file);
-			}
-		}
-
-		return tmp;
-	}
-
-	/**
-	 * Adds a specified UEFIFile to the current filesystem with a specific name.
-	 *
-	 * @param parent      the parent file in the current filesystem
-	 * @param file        the specified UEFIFile
-	 * @param fileName    the name of the file
-	 * @param isDirectory if the specified UEFIFile represents a directory
-	 * @return            the constructed GFile implementation
-	 */
-	public GFile addFile(GFile parent, UEFIFile file, String fileName, boolean isDirectory) {
-		// Add the specified file to the list of files.
-		GFile fileImpl = GFileImpl.fromPathString(this, parent, fileName, null, isDirectory,
-				file.length());
-		map.put(fileImpl, file);
-
-		return fileImpl;
-	}
-
-	/**
-	 * Adds a specified UEFIFile to the current filesystem.
-	 *
-	 * @param parent      the parent file in the current filesystem
-	 * @param file        the specified UEFIFile
-	 * @param isDirectory if the specified UEFIFile represents a directory
-	 * @return            the constructed GFile implementation
-	 */
-	public GFile addFile(GFile parent, UEFIFile file, boolean isDirectory) {
-		// Generate a file name based off the file number.
-		String fileName;
-		int fileNum = numberOfFiles.getOrDefault(parent, 0);
-		if (file instanceof UEFIFirmwareVolumeHeader) {
-			fileName = String.format("Volume %03d - %s", fileNum++, file.getName());
-		} else {
-			fileName = String.format("File %03d - %s", fileNum++, file.getName());
-		}
-
-		// Update the number of child files for the parent directory.
-		numberOfFiles.put(parent, fileNum);
-
-		// Add the specified file to the list of files.
-		return addFile(parent, file, fileName, isDirectory);
-	}
-
-	/**
-	 * Finds the next firmware volume in the current firmware image.
-	 *
-	 * @return if an additional firmware volume was found
-	 */
-	private boolean findNextFirmwareVolume() throws IOException {
-		long remainingLength = provider.length();
-		while (remainingLength >= UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE.length()) {
-			String signature = new String(provider.readBytes(headerIndex, 4));
-			if (signature.equals(UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE)) {
-				if (remainingLength <= UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE - 40) {
-					return false;
-				}
-
-				if (headerIndex - 40 >= 0) {
-					Msg.debug(this, String.format("Found _FVH signature at 0x%X", headerIndex));
-					headerIndex -= 40;
-					return true;
-				}
-			}
-
-			headerIndex += 4;
-			remainingLength -= 4;
-		}
-
-		return false;
-	}
 }

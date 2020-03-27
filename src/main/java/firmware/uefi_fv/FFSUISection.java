@@ -16,22 +16,25 @@
 
 package firmware.uefi_fv;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
+
 /**
  * Parser for FFS UI sections, which have the following specific field:
  *
+ * <pre>
  *   UEFI FFS UI Section Header
  *   +-----------+------+----------------------------------+
  *   | Type      | Size | Description                      |
  *   +-----------+------+----------------------------------+
  *   | wchar_t[] |  var | UI Section Text (Unicode string) |
  *   +-----------+------+----------------------------------+
+ * </pre>
  *
  * This header follows the common section header. See FFSSection for additional information.
  */
@@ -59,12 +62,11 @@ public class FFSUISection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSUISection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public FFSUISection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent) throws IOException {
 		this(reader);
 
 		// Add this section to the current FS.
-		fs.addFile(parent, this, getName(), false);
+		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
 	}
 
 	/**
@@ -72,6 +74,7 @@ public class FFSUISection extends FFSSection {
 	 *
 	 * @return an InputStream for the contents of the current UI section
 	 */
+	@Override
 	public InputStream getData() {
 		return new ByteArrayInputStream(uiText.getBytes());
 	}

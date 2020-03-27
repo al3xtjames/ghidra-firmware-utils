@@ -16,14 +16,15 @@
 
 package firmware.uefi_fv;
 
-import firmware.common.UUIDUtils;
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.formats.gfilesystem.GFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
+
+import firmware.common.UUIDUtils;
+import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.FileSystemIndexHelper;
+import ghidra.formats.gfilesystem.GFile;
 
 /**
  * Parser for FFS freeform sections, which have the following specific field:
@@ -50,15 +51,15 @@ public class FFSFreeformSubtypeSection extends FFSSection {
 	 * @param fs     the specified UEFIFirmwareVolumeFileSystem
 	 * @param parent the parent directory in the specified UEFIFirmwareVolumeFileSystem
 	 */
-	public FFSFreeformSubtypeSection(BinaryReader reader, UEFIFirmwareVolumeFileSystem fs,
-			GFile parent) throws IOException {
+	public FFSFreeformSubtypeSection(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
+			throws IOException {
 		super(reader);
 
 		subTypeGuid = UUIDUtils.fromBinaryReader(reader);
 		data = reader.readNextByteArray((int) length());
 
 		// Add this section to the current FS.
-		fs.addFile(parent, this, getName(), false);
+		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
 	}
 
 	/**
