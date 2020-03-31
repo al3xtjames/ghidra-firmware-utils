@@ -30,6 +30,7 @@ This was accepted as a [coreboot project for GSoC 2019][2].
  - Locates and defines global copies of UEFI table pointers (gBS/gRT/gST/etc)
 
 ## Building & Installation
+Ghidra 9.1.0 (or newer) is required.
 
 Ghidra's standard Gradle build system is used. Set the `GHIDRA_INSTALL_DIR`
 environment variable before building, or set it as a Gradle property (useful
