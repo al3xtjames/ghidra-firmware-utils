@@ -11,4 +11,5 @@ dist/
 gradle.properties
 *.dll
 *.dylib
+*.jar
 *.so

@@ -14,60 +14,7 @@
 // application.gradle.version property in <GHIDRA_INSTALL_DIR>/Ghidra/application.properties
 // for the correction version of Gradle to use for the Ghidra installation you specify.
 
-apply plugin: 'c'
-model {
-	platforms {
-		x64 {
-			architecture "x86_64"
-		}
-	}
-
-	components {
-		efidecompress(NativeLibrarySpec) {
-			targetPlatform 'x64'
-
-			sources {
-				c {
-					source {
-						srcDir 'src/efidecompress/c'
-						include 'efidecompress.c'
-					}
-				}
-			}
-
-			binaries.all {
-				cCompiler.args '-DCONFIG_JNI'
-				if (targetPlatform.operatingSystem.macOsX) {
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/darwin"
-					cCompiler.args '-mmacosx-version-min=10.9'
-					linker.args '-mmacosx-version-min=10.9'
-				} else if (targetPlatform.operatingSystem.linux) {
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
-					cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include/linux"
-					cCompiler.args '-D_FILE_OFFSET_BITS=64'
-				} else if (targetPlatform.operatingSystem.windows) {
-					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}\\include"
-					cCompiler.args "-I${org.gradle.internal.jvm.Jvm.current().javaHome}\\include\\win32"
-				}
-			}
-		}
-	}
-}
-
-import org.apache.tools.ant.taskdefs.condition.Os;
-
-task copyLibrary(type: Copy) {
-	if (Os.isFamily(Os.FAMILY_MAC)) {
-		from file("$buildDir/libs/efidecompress/shared/libefidecompress.dylib") into "$projectDir/os/osx64"
-	} else if (Os.isFamily(Os.FAMILY_UNIX)) {
-		from file("$buildDir/libs/efidecompress/shared/libefidecompress.so") into "$projectDir/os/linux64"
-	} else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-		from file("$buildDir\\libs\\efidecompress\\shared\\efidecompress.dll") into "$projectDir\\os\\win64"
-	}
-}
-
-copyLibrary.dependsOn 'efidecompressSharedLibrary'
+import org.apache.tools.ant.taskdefs.condition.Os
 
 //----------------------START "DO NOT MODIFY" SECTION------------------------------
 def ghidraInstallDir
@@ -87,10 +34,77 @@ else {
 }
 //----------------------END "DO NOT MODIFY" SECTION-------------------------------
 
-buildExtension.dependsOn 'copyLibrary'
+apply plugin: "c"
+model {
+	components {
+		efidecompress(NativeLibrarySpec) {
+			sources {
+				c {
+					source {
+						srcDir "src/efidecompress/c"
+						include "efidecompress.c"
+					}
+				}
+			}
 
-clean {
-	delete "$projectDir/os/linux64/libefidecompress.so"
-	delete "$projectDir/os/osx64/libefidecompress.dylib"
-	delete "$projectDir/os/win64/efidecompress.dll"
+			binaries.all {
+				cCompiler.args "-DCONFIG_JNI"
+				if (targetPlatform.operatingSystem.macOsX) {
+					cCompiler.args "-I", "${System.properties['java.home']}/include"
+					cCompiler.args "-I", "${System.properties['java.home']}/include/darwin"
+					cCompiler.args "-mmacosx-version-min=10.9"
+					linker.args "-mmacosx-version-min=10.9"
+				} else if (targetPlatform.operatingSystem.linux) {
+					cCompiler.args "-I", "${System.properties['java.home']}/include"
+					cCompiler.args "-I", "${System.properties['java.home']}/include/linux"
+					cCompiler.args "-D_FILE_OFFSET_BITS=64"
+				} else if (targetPlatform.operatingSystem.windows) {
+					cCompiler.args "-I${System.properties['java.home']}\\include"
+					cCompiler.args "-I${System.properties['java.home']}\\include\\win32"
+				}
+			}
+		}
+	}
 }
+
+repositories {
+	mavenCentral()
+}
+
+configurations {
+	toCopy
+}
+
+dependencies {
+	toCopy group: "org.tukaani", name: "xz", version: "1.8"
+}
+
+task copyLibraries(type: Copy, dependsOn: "efidecompressSharedLibrary") {
+	copy {
+		from configurations.toCopy into "lib"
+	}
+
+	if (Os.isFamily(Os.FAMILY_MAC)) {
+		from "$buildDir/libs/efidecompress/shared/libefidecompress.dylib" into "os/osx64"
+	} else if (Os.isFamily(Os.FAMILY_UNIX)) {
+		from "$buildDir/libs/efidecompress/shared/libefidecompress.so" into "os/linux64"
+	} else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+		from "$buildDir/libs/efidecompress/shared/efidecompress.dll" into "os/win64"
+	}
+}
+
+buildExtension.dependsOn "copyLibraries"
+
+task cleanLibraries(type: Delete) {
+	delete fileTree("lib").matching {
+		include "*.jar"
+	}
+
+	delete fileTree("os").matching {
+		include "osx64/*.dylib"
+		include "linux64/*.so"
+		include "win64/*.dll"
+	}
+}
+
+clean.dependsOn "cleanLibraries"
