@@ -26,6 +26,8 @@ import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
 import ghidra.program.flatapi.FlatProgramAPI;
 import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressOutOfBoundsException;
+import ghidra.program.model.address.AddressOverflowException;
 import ghidra.program.model.lang.LanguageCompilerSpecPair;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.MemoryBlock;
@@ -113,18 +115,27 @@ public class TELoader extends AbstractLibrarySupportLoader {
 				inputStream = provider.getInputStream(sectionHeader.getVirtualAddress() -
 						teHeader.getHeaderOffset());
 				long startAddress = teHeader.getImageBase() + sectionHeader.getVirtualAddress();
-				MemoryBlock section = api.createMemoryBlock(sectionHeader.getName(),
-						api.toAddr(startAddress), inputStream, sectionHeader.getVirtualSize(),
-						false);
+				try {
+					MemoryBlock section = api.createMemoryBlock(sectionHeader.getName(),
+							api.toAddr(startAddress), inputStream, sectionHeader.getVirtualSize(),
+							false);
 
-				// Set the appropriate permissions for this segment.
-				section.setRead(sectionHeader.isReadable());
-				section.setWrite(sectionHeader.isWritable());
-				section.setExecute(sectionHeader.isExecutable());
+					// Set the appropriate permissions for this segment.
+					section.setRead(sectionHeader.isReadable());
+					section.setWrite(sectionHeader.isWritable());
+					section.setExecute(sectionHeader.isExecutable());
 
-				Msg.debug(this, String.format("Added %s section: 0x%X-0x%X",
-						sectionHeader.getName(), startAddress, startAddress +
-						sectionHeader.getVirtualSize()));
+					Msg.debug(this, String.format("Added %s section: 0x%X-0x%X",
+							sectionHeader.getName(), startAddress, startAddress +
+							sectionHeader.getVirtualSize()));
+				} catch (AddressOverflowException e) {
+					Msg.showWarn(this, null, getName() + " Loader",
+							"Skipping overflowing section " + sectionHeader.getName() + ": " +
+							e.getMessage(), e);
+				} catch (AddressOutOfBoundsException e) {
+					// This is thrown immediately after AddressOverflowException. Ignore this since
+					// we should have already shown the warning message.
+				}
 			}
 
 			// Set the UEFI property if this a UEFI binary.
