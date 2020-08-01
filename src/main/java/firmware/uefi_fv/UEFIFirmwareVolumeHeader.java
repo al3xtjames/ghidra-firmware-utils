@@ -104,7 +104,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 			monitor.setProgress(signaturePosition);
 
 			int signature = reader.readNextInt();
-			if (signaturePosition > SIGNATURE_OFFSET &&
+			if (signaturePosition >= SIGNATURE_OFFSET &&
 					signature == UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE_LE) {
 				long endOfHeader = signaturePosition - SIGNATURE_OFFSET +
 						UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE;
