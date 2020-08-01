@@ -49,7 +49,7 @@ import ghidra.util.task.TaskMonitor;
  *   | u16                   |    2 | Extended Header Offset (only for rev 2, otherwise Reserved) |
  *   | u8                    |    1 | Reserved                                                    |
  *   | u8                    |    1 | Revision                                                    |
- *   | efi_fv_block_map_t[2] |   16 | Block Map                                                   |
+ *   | efi_fv_block_map_t[]  |  var | Block Map                                                   |
  *   +-----------------------+------+-------------------------------------------------------------+
  * </pre>
  *
@@ -64,6 +64,8 @@ import ghidra.util.task.TaskMonitor;
  *   | u32  |    4 | Block Size       |
  *   +------+------+------------------+
  * </pre>
+ *
+ * The Block Map array is terminated by a Block Map entry with Number of Blocks and Block Size set to 0.
  *
  * The Extended Header Offset field is relative to the start of firmware volume header; it has the following structure:
  *
@@ -107,7 +109,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 			if (signaturePosition >= SIGNATURE_OFFSET &&
 					signature == UEFIFirmwareVolumeConstants.UEFI_FV_SIGNATURE_LE) {
 				long endOfHeader = signaturePosition - SIGNATURE_OFFSET +
-						UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE;
+						UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_MIN_SIZE;
 				if (endOfHeader >= provider.length()) {
 					return -1;
 				}
@@ -139,6 +141,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	private int extendedHeaderSize;
 
 	private long baseIndex;
+	private boolean checksumValid;
 
 	/**
 	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader and adds it to a specified
@@ -148,14 +151,14 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	 * @param fsih   the specified {@link FileSystemIndexHelper} that handles files
 	 * @param parent the parent directory in the specified FileSystemIndexHelper
 	 */
-	public UEFIFirmwareVolumeHeader(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih,
-			GFile parent, boolean nested) throws IOException {
+	public UEFIFirmwareVolumeHeader(BinaryReader reader, FileSystemIndexHelper<UEFIFile> fsih, GFile parent,
+			boolean nested) throws IOException {
 		baseIndex = reader.getPointerIndex();
 		zeroVector = reader.readNextByteArray(16);
 
 		fileSystemGuid = UUIDUtils.fromBinaryReader(reader);
 		size = reader.readNextLong();
-		if (size < UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE) {
+		if (size < UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_MIN_SIZE) {
 			throw new IOException("Not a valid UEFI FV header");
 		}
 
@@ -166,22 +169,37 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 
 		attributes = reader.readNextInt();
 		headerSize = reader.readNextShort();
+		if (headerSize < UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_MIN_SIZE || headerSize > size ||
+				headerSize % 2 != 0) {
+			throw new IOException("Not a valid UEFI FV Header");
+		}
+
 		checksum = reader.readNextShort();
 		extendedHeaderOffset = reader.readNextShort();
+		if (extendedHeaderOffset > size - UEFIFirmwareVolumeConstants.UEFI_FV_EXT_HEADER_SIZE) {
+			throw new IOException("Not a valid UEFI FV Header");
+		}
 
 		// Skip the Reserved field.
 		reader.setPointerIndex(reader.getPointerIndex() + 1);
 		revision = reader.readNextByte();
-
-		// Skip the FvBlockMap field.
-		reader.setPointerIndex(reader.getPointerIndex() + 16);
+		if (revision != 1 && revision != 2) {
+			throw new IOException("Not a valid UEFI FV Header");
+		}
 
 		// Read the extended header fields (if present).
+		long bodyIndex;
 		if (revision == 2 && extendedHeaderOffset > 0) {
 			reader.setPointerIndex(baseIndex + extendedHeaderOffset);
 			fvName = UUIDUtils.fromBinaryReader(reader);
 			extendedHeaderSize = reader.readNextInt();
-			reader.setPointerIndex(baseIndex + extendedHeaderOffset + extendedHeaderSize);
+			if (extendedHeaderOffset + extendedHeaderSize > size) {
+				throw new IOException("Not a valid UEFI FV Header");
+			}
+
+			bodyIndex = baseIndex + extendedHeaderOffset + extendedHeaderSize;
+		} else {
+			bodyIndex = baseIndex + headerSize;
 		}
 
 		// Retrieve the current volume's alignment.
@@ -190,26 +208,30 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 			alignment = 1 << ((attributes & UEFIFirmwareVolumeConstants.Attributes.ALIGNMENT));
 		}
 		else if (revision == 2) {
-			alignment =
-					1 << ((attributes & UEFIFirmwareVolumeConstants.AttributesV2.ALIGNMENT) >> 16);
-		}
-		else {
-			Msg.warn(this, "Unknown FV header revision: " + revision);
+			alignment = 1 << ((attributes & UEFIFirmwareVolumeConstants.AttributesV2.ALIGNMENT) >> 16);
 		}
 
 		if (alignment < 8) {
 			alignment = 8;
 		}
 
+		// Calculate the checksum.
+		int calculatedChecksum = 0;
+		reader.setPointerIndex(baseIndex);
+		for (int i = 0; i < headerSize; i += 2) {
+			calculatedChecksum += reader.readNextUnsignedShort();
+		}
+
+		checksumValid = (calculatedChecksum & 0xFFFF) == 0;
+		reader.setPointerIndex(bodyIndex);
+
 		// Add this firmware volume as a subdirectory in the current FS.
 		GFile fileImpl = fsih.storeFileWithParent(
-			UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1, true,
-			-1, this);
+				UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1, true, -1, this);
 
 		// Ignore NVRAM volumes - add the contents as a raw file, and skip FFS file parsing.
 		if (fileSystemGuid.equals(UEFIFirmwareVolumeConstants.EFI_SYSTEM_NV_DATA_FV_GUID)) {
-			new FFSRawFile(reader, (int) size - UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_SIZE,
-				fsih, fileImpl);
+			new FFSRawFile(reader, (int) size - UEFIFirmwareVolumeConstants.UEFI_FV_HEADER_MIN_SIZE, fsih, fileImpl);
 		}
 		else {
 			// Read the files in the current firmware volume.
@@ -276,6 +298,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 		formatter.format("Firmware volume size: 0x%X\n", size);
 		formatter.format("Firmware volume attributes: 0x%X\n", attributes);
 		formatter.format("Firmware volume header size: 0x%X\n", headerSize);
+		formatter.format("Firmware volume checksum: 0x%X (%s)\n", checksum, checksumValid ? "valid" : "invalid");
 		formatter.format("Firmware volume revision: %d", revision);
 		if (revision == 2 && extendedHeaderOffset > 0) {
 			formatter.format("\nFirmware volume name GUID: %s\n", fvName.toString());

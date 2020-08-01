@@ -27,8 +27,11 @@ public final class UEFIFirmwareVolumeConstants {
 	public static final int UEFI_FV_SIGNATURE_LE = 0x4856465f;
 	public static final int UEFI_FV_SIGNATURE_LEN = 4;
 
-	// Size of the UEFI Firmware Volume Header structure
-	public static final int UEFI_FV_HEADER_SIZE = 72;
+	// Minimum size of the UEFI Firmware Volume Header structure
+	public static final int UEFI_FV_HEADER_MIN_SIZE = 64;
+
+	// Size of the UEFI Firmware Volume Extended Header structure
+	public static final int UEFI_FV_EXT_HEADER_SIZE = 20;
 
 	// UEFI Firmware Volume attributes (legacy)
 	public static final class Attributes {
