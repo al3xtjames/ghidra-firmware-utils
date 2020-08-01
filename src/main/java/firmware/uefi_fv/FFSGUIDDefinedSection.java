@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
 import java.util.UUID;
+import java.util.zip.CRC32;
 
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 
@@ -51,6 +52,8 @@ import ghidra.util.Msg;
  * <p>
  * Depending on the Section Definition GUID and the bits set in the Attributes field, the data may be compressed or
  * require other processing.
+ *
+ * TODO: It would probably be better if this was refactored as FFSGUIDDefinedSectionFactory.
  */
 public class FFSGUIDDefinedSection extends FFSSection {
 	// Original header fields
@@ -102,8 +105,7 @@ public class FFSGUIDDefinedSection extends FFSSection {
 			parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
 		} else if (sectionDefinitionGuid.equals(UEFIFFSConstants.LZMA_COMPRESS_GUID)) {
 			BoundedInputStream boundedStream = new BoundedInputStream(
-					reader.getByteProvider().getInputStream(reader.getPointerIndex()),
-					length());
+					reader.getByteProvider().getInputStream(reader.getPointerIndex()), length());
 
 			try {
 				LZMACompressorInputStream inputStream = new LZMACompressorInputStream(boundedStream);
@@ -114,11 +116,31 @@ public class FFSGUIDDefinedSection extends FFSSection {
 						new ByteArrayProvider(uncompressedData), true);
 				parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
 			} catch (IOException e) {
-				Msg.error(this, "Failed to extract LZMA compressed section: " +
-						e.getMessage());
+				Msg.error(this, "Failed to extract LZMA compressed section: " + e.getMessage());
 				reader.setPointerIndex(baseIndex + getTotalLength());
 				return;
 			}
+		} else if (sectionDefinitionGuid.equals(UEFIFFSConstants.CRC32_GUID)) {
+			// Read the expected CRC-32 checksum, which is located directly after the attributes
+			// field in the section header.
+			reader.setPointerIndex(baseIndex + super.getHeaderLength() + 20);
+			long expectedChecksum = reader.readNextUnsignedInt();
+			reader.setPointerIndex(baseIndex + dataOffset);
+
+			// Read the current GUID-defined section and validate the CRC-32 checksum.
+			uncompressedData = reader.readNextByteArray((int) length());
+			CRC32 crc32 = new CRC32();
+			crc32.update(uncompressedData);
+			long checksum = crc32.getValue();
+			if (checksum != expectedChecksum) {
+				Msg.warn(this, String.format("CRC-32 checksum mismatch: expected %X, got %X",
+						expectedChecksum, checksum));
+			}
+
+			// Parse the data in the current GUID-defined section.
+			BinaryReader sectionReader = new BinaryReader(
+					new ByteArrayProvider(uncompressedData), true);
+			parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
 		} else {
 			// Parse the data in the current GUID-defined section.
 			parseNestedSections(reader, length(), fsih, fileImpl);

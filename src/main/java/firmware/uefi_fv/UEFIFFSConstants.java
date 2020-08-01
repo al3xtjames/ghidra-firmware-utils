@@ -182,4 +182,8 @@ public final class UEFIFFSConstants {
 	// LZMA compression GUID (for GUID-defined sections)
 	public static final UUID LZMA_COMPRESS_GUID =
 			UUID.fromString("EE4E5898-3914-4259-9D6E-DC7BD79403CF");
+
+	// CRC-32 GUID (for GUID-defined sections)
+	public static final UUID CRC32_GUID =
+			UUID.fromString("FC1BCDB0-7D31-49AA-936A-A4600D9DD083");
 }
