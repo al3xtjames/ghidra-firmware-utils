@@ -54,7 +54,11 @@ public class DeviceList implements StructConverter {
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("device_list_t", 0);
-		structure.add(new ArrayDataType(WORD, deviceList.size(), 2), "supported_device_ids", null);
+		if (deviceList.size() > 0) {
+			structure.add(new ArrayDataType(WORD, deviceList.size(), 2), "supported_device_ids",
+					null);
+		}
+
 		structure.add(WORD, 2, "terminator", null);
 		return structure;
 	}
