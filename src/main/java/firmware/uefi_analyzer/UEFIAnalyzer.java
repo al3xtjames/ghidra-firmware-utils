@@ -412,23 +412,18 @@ public class UEFIAnalyzer extends AbstractAnalyzer {
 		long index = 0;
 		while (index < block.getSize() - efiGuidType.getLength()) {
 			UUID guid = UUIDUtils.fromBinaryReader(reader);
-			if (guid.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
+			if (UUIDUtils.dbContains(guid)) {
+				Address guidAddress = block.getStart().add(index);
+				Msg.debug(this, String.format(
+						"Found %s (%s) at 0x%s", UUIDUtils.getName(guid), guid.toString(),
+						guidAddress.toString().toUpperCase()));
+
+				// Apply the EFI_GUID data type for the GUID we found.
+				defineData(program, guidAddress, efiGuidType, UUIDUtils.getName(guid), guid.toString());
 				index += efiGuidType.getLength();
 			}
 			else {
-				if (UUIDUtils.dbContains(guid)) {
-					Address guidAddress = block.getStart().add(index);
-					Msg.debug(this, String.format(
-							"Found %s (%s) at 0x%s", UUIDUtils.getName(guid), guid.toString(),
-							guidAddress.toString().toUpperCase()));
-
-					// Apply the EFI_GUID data type for the GUID we found.
-					defineData(program, guidAddress, efiGuidType, UUIDUtils.getName(guid), guid.toString());
-					index += efiGuidType.getLength();
-				}
-				else {
-					index += 1;
-				}
+				index += 1;
 			}
 
 			reader.setPointerIndex(index);
