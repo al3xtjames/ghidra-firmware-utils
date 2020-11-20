@@ -129,9 +129,8 @@ public class TELoader extends AbstractLibrarySupportLoader {
 							sectionHeader.getName(), startAddress, startAddress +
 							sectionHeader.getVirtualSize()));
 				} catch (AddressOverflowException e) {
-					Msg.showWarn(this, null, getName() + " Loader",
-							"Skipping overflowing section " + sectionHeader.getName() + ": " +
-							e.getMessage(), e);
+					Msg.warn(this,
+							"Skipping overflowing " + sectionHeader.getName() + " section:", e);
 				} catch (AddressOutOfBoundsException e) {
 					// This is thrown immediately after AddressOverflowException. Ignore this since
 					// we should have already shown the warning message.
