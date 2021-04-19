@@ -106,8 +106,8 @@ jobs:
               echo "PLUGIN_TAG=$plugin_date.0" >> $GITHUB_ENV
           fi
 
-      - if: github.ref == 'refs/heads/master'
-        name: Upload to Releases
+      - name: Upload to Releases
+        if: ${{ github.ref == 'refs/heads/master' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
