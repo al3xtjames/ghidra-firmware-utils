@@ -100,7 +100,8 @@ jobs:
           ./gradlew
           echo "PLUGIN_DATE=$(find dist -name '*.zip' | awk -F '_' '{print $4}')" >> $GITHUB_ENV
 
-      - name: Upload to Releases
+      - if: github.ref == 'refs/heads/master'
+        name: Upload to Releases
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
