@@ -98,7 +98,13 @@ jobs:
       - name: Build plugin with Gradle
         run: |
           ./gradlew
-          echo "PLUGIN_DATE=$(find dist -name '*.zip' | awk -F '_' '{print $4}')" >> $GITHUB_ENV
+          plugin_date=$(find dist -name '*.zip' | awk -F '_' '{print $4}')
+          last_tag=$(git tag -l "$plugin_date.*" | tail -n 1)
+          if [ ! -z "$last_tag" ]; then
+              echo "$last_tag" | awk -F '.' '{print "PLUGIN_TAG=" $1 "." $2+1}' >> $GITHUB_ENV
+          else
+              echo "PLUGIN_TAG=$plugin_date.0" >> $GITHUB_ENV
+          fi
 
       - if: github.ref == 'refs/heads/master'
         name: Upload to Releases
@@ -106,6 +112,5 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: dist/*.zip
-          tag: ${{ env.PLUGIN_DATE }}
-          overwrite: true
+          tag: ${{ env.PLUGIN_TAG }}
           file_glob: true
