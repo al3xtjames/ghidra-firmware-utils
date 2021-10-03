@@ -17,7 +17,6 @@
 package util;
 
 import ghidra.framework.Application;
-import ghidra.util.Msg;
 
 import java.io.File;
 import java.io.FileNotFoundException;
