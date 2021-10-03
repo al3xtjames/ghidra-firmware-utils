@@ -25,7 +25,7 @@ jobs:
         run: |
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
+          echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
         working-directory: /tmp
 
       - name: Build with Gradle
@@ -69,6 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 11
         uses: actions/setup-java@v2
@@ -80,7 +82,7 @@ jobs:
         run: |
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
+          echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
         working-directory: /tmp
 
       - name: Download macOS JNI library
@@ -101,11 +103,12 @@ jobs:
           plugin_date=$(find dist -name '*.zip' | awk -F '_' '{print $4}')
           last_tag=$(git tag -l "$plugin_date.*" | tail -n 1)
           if [ ! -z "$last_tag" ]; then
-              echo "$last_tag" | awk -F '.' '{print "PLUGIN_TAG=" $1 "." $2+1}' >> $GITHUB_ENV
+              plugin_tag=$(echo "$last_tag" | awk -F '.' '{print $1 "." $2+1}')
           else
-              echo "PLUGIN_TAG=$plugin_date.0" >> $GITHUB_ENV
+              plugin_tag="$plugin_date.0"
           fi
-          mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${PLUGIN_TAG}_ghidra-firmware-utils.zip"
+          echo "PLUGIN_TAG=${plugin_tag}" >> $GITHUB_ENV
+          mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v2
