@@ -26,7 +26,7 @@ jobs:
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
-        working-directory: ${{ env.TMPDIR }}
+        working-directory: /tmp
 
       - name: Build with Gradle
         run: ./gradlew
@@ -53,7 +53,7 @@ jobs:
           Invoke-WebRequest "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${env:GHIDRA_VERSION}_build/ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -OutFile "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip"
           Expand-Archive "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -DestinationPath .
           echo "GHIDRA_INSTALL_DIR=$pwd\ghidra_${env:GHIDRA_VERSION}_PUBLIC" >> ${env:GITHUB_ENV}
-        working-directory: ${{ env.TEMP }}
+        working-directory: C:\Users\installer\AppData\Local\Temp
 
       - name: Build with Gradle
         run: ./gradlew.bat
@@ -81,7 +81,7 @@ jobs:
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
-        working-directory: ${{ env.TMPDIR }}
+        working-directory: /tmp
 
       - name: Download macOS JNI library
         uses: actions/download-artifact@v2
