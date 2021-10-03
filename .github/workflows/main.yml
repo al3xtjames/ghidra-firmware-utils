@@ -105,6 +105,7 @@ jobs:
           else
               echo "PLUGIN_TAG=$plugin_date.0" >> $GITHUB_ENV
           fi
+          mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${PLUGIN_TAG}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v2
