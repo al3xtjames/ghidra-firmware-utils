@@ -36,8 +36,17 @@ else {
 
 apply plugin: "c"
 model {
+	platforms {
+		default64 {
+			if (operatingSystem.Windows && architecture.i386) {
+				architecture "x64"
+			}
+		}
+	}
+
 	components {
 		efidecompress(NativeLibrarySpec) {
+			targetPlatform "default64"
 			sources {
 				c {
 					source {
