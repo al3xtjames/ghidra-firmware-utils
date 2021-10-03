@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  GHIDRA_VERSION: 9.2.3
-  GHIDRA_DATE: 20210325
+  GHIDRA_VERSION: 10.0.4
+  GHIDRA_DATE: 20210928
 
 jobs:
   build-macos:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Set up Ghidra
         run: |
-          curl -O "https://ghidra-sre.org/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
+          curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
         working-directory: ${{ env.TMPDIR }}
@@ -50,7 +50,7 @@ jobs:
 
       - name: Set up Ghidra
         run: |
-          Invoke-WebRequest "https://ghidra-sre.org/ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -OutFile "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip"
+          Invoke-WebRequest "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${env:GHIDRA_VERSION}_build/ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -OutFile "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip"
           Expand-Archive "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -DestinationPath .
           echo "GHIDRA_INSTALL_DIR=$pwd\ghidra_${env:GHIDRA_VERSION}_PUBLIC" >> ${env:GITHUB_ENV}
         working-directory: ${{ env.TEMP }}
@@ -78,7 +78,7 @@ jobs:
 
       - name: Set up Ghidra
         run: |
-          curl -O "https://ghidra-sre.org/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
+          curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=$PWD/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
         working-directory: ${{ env.TMPDIR }}
