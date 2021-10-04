@@ -108,6 +108,7 @@ jobs:
               plugin_tag="$plugin_date.0"
           fi
           echo "PLUGIN_TAG=${plugin_tag}" >> $GITHUB_ENV
+          echo "PLUGIN_CHANGELOG=$(git log --pretty=format:%s ${last_tag}..)" >> $GITHUB_ENV
           mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
@@ -123,3 +124,4 @@ jobs:
           file: dist/*.zip
           tag: ${{ env.PLUGIN_TAG }}
           file_glob: true
+          body: ${{ env.PLUGIN_CHANGELOG }}
