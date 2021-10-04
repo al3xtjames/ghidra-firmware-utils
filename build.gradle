@@ -38,7 +38,8 @@ apply plugin: "c"
 model {
 	platforms {
 		default64 {
-			if (operatingSystem.Windows && architecture.i386) {
+			if (operatingSystem.Windows && architecture.i386 &&
+			    System.properties['sun.arch.data.model'] == 64) {
 				architecture "x64"
 			}
 		}
