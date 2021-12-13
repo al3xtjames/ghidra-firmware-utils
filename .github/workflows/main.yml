@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  GHIDRA_VERSION: 10.0.4
-  GHIDRA_DATE: 20210928
+  GHIDRA_VERSION: 10.1
+  GHIDRA_DATE: 20211210
 
 jobs:
   build-macos:

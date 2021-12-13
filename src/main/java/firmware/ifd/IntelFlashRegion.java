@@ -17,20 +17,19 @@
 package firmware.ifd;
 
 import ghidra.app.util.bin.BinaryReader;
-import ghidra.util.BoundedInputStream;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Formatter;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * Parser for Intel flash regions (using region information defined in a flash descriptor).
  */
 public class IntelFlashRegion {
-	private int baseAddress;
-	private int length;
-	private int type;
-	private BoundedInputStream inputStream;
+	private final int baseAddress;
+	private final int length;
+	private final int type;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs an IntelFlashRegion from a specified BinaryReader.
@@ -39,21 +38,20 @@ public class IntelFlashRegion {
 	 * @param length the length of the flash region in bytes
 	 * @param type   the region type (see IntelFlashDescriptorConstants.FlashRegionType)
 	 */
-	public IntelFlashRegion(BinaryReader reader, int length, int type) throws IOException {
+	public IntelFlashRegion(BinaryReader reader, int length, int type) {
 		baseAddress = (int) reader.getPointerIndex();
 		this.length = length;
 		this.type = type;
-		inputStream = new BoundedInputStream(reader.getByteProvider().getInputStream(baseAddress),
-				length);
+		provider = new ByteProviderWrapper(reader.getByteProvider(), baseAddress, length);
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current flash region.
+	 * Returns a ByteProvider for the contents of the current flash region.
 	 *
-	 * @return an InputStream for the contents of the current flash region
+	 * @return a ByteProvider for the contents of the current flash region
 	 */
-	public InputStream getData() {
-		return inputStream;
+	public ByteProvider getByteProvider() {
+		return provider;
 	}
 
 	/**
@@ -74,13 +72,11 @@ public class IntelFlashRegion {
 		return length;
 	}
 
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Region name: %s (type %d)\n",
-				IntelFlashDescriptorConstants.FlashRegionType.toString(type), type);
-		formatter.format("Region base address: 0x%X\n", baseAddress);
-		formatter.format("Region size: 0x%X", length);
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, IntelFlashDescriptorConstants.FlashRegionType.toString(type));
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(length));
+		attributes.add("Base Address", String.format("%#x", baseAddress));
+		return attributes;
 	}
 }

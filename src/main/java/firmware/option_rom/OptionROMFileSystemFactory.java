@@ -16,24 +16,21 @@
 
 package firmware.option_rom;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.FSRL;
 import ghidra.formats.gfilesystem.FSRLRoot;
 import ghidra.formats.gfilesystem.FileSystemService;
-import ghidra.formats.gfilesystem.factory.GFileSystemFactoryFull;
-import ghidra.formats.gfilesystem.factory.GFileSystemProbeFull;
-import ghidra.util.exception.CancelledException;
+import ghidra.formats.gfilesystem.factory.GFileSystemFactoryByteProvider;
+import ghidra.formats.gfilesystem.factory.GFileSystemProbeByteProvider;
 import ghidra.util.task.TaskMonitor;
 
-public class OptionROMFileSystemFactory implements GFileSystemFactoryFull<OptionROMFileSystem>, GFileSystemProbeFull {
+public class OptionROMFileSystemFactory implements GFileSystemFactoryByteProvider<OptionROMFileSystem>,
+		GFileSystemProbeByteProvider {
 	@Override
-	public boolean probe(FSRL containerFSRL, ByteProvider provider, File containerFile, FileSystemService fsService,
-			TaskMonitor monitor) throws IOException, CancelledException {
+	public boolean probe(ByteProvider provider, FileSystemService fsService, TaskMonitor monitor) throws IOException {
 		byte[] signature = provider.readBytes(0, 2);
 		if (!Arrays.equals(signature, OptionROMConstants.ROM_SIGNATURE_BYTES)) {
 			return false;
@@ -47,17 +44,16 @@ public class OptionROMFileSystemFactory implements GFileSystemFactoryFull<Option
 			// This is needed to avoid treating nested images (e.g. a legacy image in an open
 			// hybrid expansion ROM filesystem) as an identical ROM filesystem.
 			return header.getPCIRHeader().getImageLength() != provider.length();
-		} catch (IOException e) {
+		} catch (IOException ignored) {
 		}
 
 		return true;
 	}
 
 	@Override
-	public OptionROMFileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL, ByteProvider provider,
-			File containerFile, FileSystemService fsService, TaskMonitor monitor)
-			throws IOException, CancelledException {
-		OptionROMFileSystem fs = new OptionROMFileSystem(targetFSRL);
+	public OptionROMFileSystem create(FSRLRoot fsrlRoot, ByteProvider provider, FileSystemService fsService,
+			TaskMonitor monitor) throws IOException {
+		OptionROMFileSystem fs = new OptionROMFileSystem(fsrlRoot);
 		try {
 			fs.mount(provider, monitor);
 			return fs;

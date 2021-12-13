@@ -16,6 +16,7 @@
 
 package firmware.uefi_fv;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Formatter;
 import java.util.UUID;
@@ -24,6 +25,8 @@ import firmware.common.UUIDUtils;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.Msg;
 
 /**
@@ -52,15 +55,15 @@ import ghidra.util.Msg;
  */
 public class UEFIFFSFile implements UEFIFile {
 	// Original header fields
-	private UUID nameGuid;
-	private byte headerChecksum;
-	private byte fileChecksum;
-	private byte type;
-	private byte attributes;
+	private final UUID nameGuid;
+	private final byte headerChecksum;
+	private final byte fileChecksum;
+	private final byte type;
+	private final byte attributes;
 	private long size;
-	private byte state;
+	private final byte state;
 
-	private long baseIndex;
+	private final long baseIndex;
 	private String uiName;
 
 	/**
@@ -190,19 +193,20 @@ public class UEFIFFSFile implements UEFIFile {
 	}
 
 	/**
-	 * Returns a string representation of the current FFS file.
+	 * Returns FileAttributes for the current FFS file.
 	 *
-	 * @return a string representation of the current FFS file
+	 * @return FileAttributes for the current FFS file
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("File base: 0x%X\n", baseIndex);
-		formatter.format("File GUID: %s\n", nameGuid.toString());
-		formatter.format("File type: %s (0x%X)\n", UEFIFFSConstants.FileType.toString(type), type);
-		formatter.format("File attributes: 0x%X\n", attributes);
-		formatter.format("File size: 0x%X\n", size);
-		formatter.format("File state: 0x%X\n", state);
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, getName());
+		attributes.add(FileAttributeType.SIZE_ATTR, size);
+		attributes.add("GUID", nameGuid.toString());
+		attributes.add("Header Checksum", String.format("%#x", headerChecksum));
+		attributes.add("File Checksum", String.format("%#x", fileChecksum));
+		attributes.add("File Type", UEFIFFSConstants.FileType.toString(type));
+		attributes.add("Attributes", String.format("%#x", this.attributes));
+		attributes.add("State", String.format("%#x", state));
+		return attributes;
 	}
 }

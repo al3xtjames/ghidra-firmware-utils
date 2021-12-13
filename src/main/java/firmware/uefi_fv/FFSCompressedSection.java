@@ -19,6 +19,9 @@ package firmware.uefi_fv;
 import java.io.*;
 import java.util.Formatter;
 
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 
 import firmware.common.EFIDecompressor;
@@ -50,10 +53,8 @@ import ghidra.util.Msg;
  */
 public class FFSCompressedSection extends FFSSection {
 	// Original header fields
-	private int uncompressedSize;
-	private byte compressionType;
-
-	private byte[] uncompressedData;
+	private final int uncompressedSize;
+	private final byte compressionType;
 
 	/**
 	 * Constructs a FFSCompressedSection from a specified BinaryReader and adds it to a specified
@@ -71,6 +72,7 @@ public class FFSCompressedSection extends FFSSection {
 		compressionType = reader.readNextByte();
 		byte[] compressedData = reader.readNextByteArray((int) length());
 
+		byte[] uncompressedData;
 		switch (compressionType) {
 			case UEFIFFSConstants.CompressionType.NOT_COMPRESSED:
 				uncompressedData = compressedData;
@@ -125,14 +127,14 @@ public class FFSCompressedSection extends FFSSection {
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current compressed section. This will return
+	 * Returns a ByteProvider for the contents of the current compressed section. This will return
 	 * null, as it shouldn't be possible to call this; compressed sections are added to the FS as
 	 * directories.
 	 *
-	 * @return an InputStream for the contents of the current compressed section
+	 * @return a ByteProvider for the contents of the current compressed section
 	 */
 	@Override
-	public InputStream getData() {
+	public ByteProvider getByteProvider() {
 		return null;
 	}
 
@@ -167,17 +169,14 @@ public class FFSCompressedSection extends FFSSection {
 	}
 
 	/**
-	 * Returns a string representation of the current compressed section.
+	 * Returns FileAttributes for the current compressed section.
 	 *
-	 * @return a string representation of the current compressed section
+	 * @return FileAttributes for the current compressed section
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("%s\n", super.toString());
-		formatter.format("Uncompressed size: 0x%X\n", uncompressedSize);
-		formatter.format("Compression type: %s (0x%X)",
-			UEFIFFSConstants.CompressionType.toString(compressionType), compressionType);
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add("Uncompressed Size", uncompressedSize);
+		attributes.add("Compression Type", UEFIFFSConstants.CompressionType.toString(compressionType));
+		return attributes;
 	}
 }

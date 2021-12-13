@@ -17,12 +17,11 @@
 package firmware.uefi_fv;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
-import ghidra.util.BoundedInputStream;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * Parser for FFS version sections, which have the following specific fields:
@@ -41,10 +40,8 @@ import ghidra.util.BoundedInputStream;
  */
 public class FFSVersionSection extends FFSSection {
 	// Original header fields
-	private short buildNumber;
-	private String versionString;
-
-	private BoundedInputStream inputStream;
+	private final short buildNumber;
+	private final String versionString;
 
 	/**
 	 * Constructs a FFSVersionSection from a specified BinaryReader and adds it to a specified
@@ -59,8 +56,6 @@ public class FFSVersionSection extends FFSSection {
 			GFile parent) throws IOException {
 		super(reader);
 
-		inputStream = new BoundedInputStream(
-			reader.getByteProvider().getInputStream(reader.getPointerIndex()), length());
 		buildNumber = reader.readNextShort();
 		versionString = reader.readNextUnicodeString((int) length() / 2);
 
@@ -75,16 +70,6 @@ public class FFSVersionSection extends FFSSection {
 	 */
 	public short getBuildNumber() {
 		return buildNumber;
-	}
-
-	/**
-	 * Returns an InputStream for the contents of the current version section.
-	 *
-	 * @return an InputStream for the contents of the current version section
-	 */
-	@Override
-	public InputStream getData() {
-		return inputStream;
 	}
 
 	/**
@@ -117,13 +102,13 @@ public class FFSVersionSection extends FFSSection {
 	}
 
 	/**
-	 * Returns a string representation of the current version section.
+	 * Returns FileAttributes for the current version section.
 	 *
-	 * @return a string representation of the current version section
+	 * @return FileAttributes for the current version section
 	 */
-	@Override
-	public String toString() {
-		return super.toString() + "\nBuild number: " + buildNumber + "\nVersion string: " +
-				versionString;
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("Version String", versionString);
+		return attributes;
 	}
 }

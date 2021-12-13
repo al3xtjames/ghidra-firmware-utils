@@ -16,33 +16,29 @@
 
 package firmware.uefi_fv;
 
-import java.io.File;
 import java.io.IOException;
 
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.formats.gfilesystem.*;
-import ghidra.formats.gfilesystem.factory.GFileSystemFactoryFull;
-import ghidra.formats.gfilesystem.factory.GFileSystemProbeFull;
+import ghidra.formats.gfilesystem.factory.GFileSystemFactoryByteProvider;
+import ghidra.formats.gfilesystem.factory.GFileSystemProbeByteProvider;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
-public class UEFIFirmwareVolumeFileSystemFactory
-implements GFileSystemFactoryFull<UEFIFirmwareVolumeFileSystem>, GFileSystemProbeFull {
+public class UEFIFirmwareVolumeFileSystemFactory implements
+		GFileSystemFactoryByteProvider<UEFIFirmwareVolumeFileSystem>, GFileSystemProbeByteProvider {
 
 	@Override
-	public boolean probe(FSRL containerFSRL, ByteProvider provider, File containerFile,
-			FileSystemService fsService, TaskMonitor monitor)
+	public boolean probe(ByteProvider provider, FileSystemService fsService, TaskMonitor monitor)
 					throws IOException, CancelledException {
 		long headerIndex = UEFIFirmwareVolumeHeader.findNext(provider, 0, monitor);
 		return headerIndex != -1;
 	}
 
 	@Override
-	public UEFIFirmwareVolumeFileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL,
-			ByteProvider provider, File containerFile, FileSystemService fsService,
+	public UEFIFirmwareVolumeFileSystem create(FSRLRoot fsrlRoot, ByteProvider provider, FileSystemService fsService,
 			TaskMonitor monitor) throws IOException, CancelledException {
-
-		UEFIFirmwareVolumeFileSystem fs = new UEFIFirmwareVolumeFileSystem(targetFSRL);
+		UEFIFirmwareVolumeFileSystem fs = new UEFIFirmwareVolumeFileSystem(fsrlRoot);
 		try {
 			fs.mount(provider, monitor);
 			return fs;
@@ -52,5 +48,4 @@ implements GFileSystemFactoryFull<UEFIFirmwareVolumeFileSystem>, GFileSystemProb
 			throw ioe;
 		}
 	}
-
 }

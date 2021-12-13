@@ -17,21 +17,19 @@
 package firmware.ifd;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
-import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.*;
 import ghidra.formats.gfilesystem.*;
 import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
-import ghidra.util.exception.CancelledException;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.task.TaskMonitor;
 
 @FileSystemInfo(type = "ifd", description = "Intel Flash Descriptor", factory = IntelFlashFileSystemFactory.class)
 public class IntelFlashFileSystem implements GFileSystem {
 	private final FSRLRoot fsFSRL;
-	private FileSystemIndexHelper<IntelFlashRegion> fsih;
-	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private final FileSystemIndexHelper<IntelFlashRegion> fsih;
+	private final FileSystemRefManager refManager = new FileSystemRefManager(this);
 	private ByteProvider provider;
 
 	public IntelFlashFileSystem(FSRLRoot fsFSRL) {
@@ -46,31 +44,17 @@ public class IntelFlashFileSystem implements GFileSystem {
 		reader.setPointerIndex(offset - 16);
 		IntelFlashDescriptor ifd = new IntelFlashDescriptor(reader);
 		List<IntelFlashRegion> regions = ifd.getRegions();
+
 		for (IntelFlashRegion region : regions) {
 			String regionName = String.format("Region %02d - %s", region.getType(),
-				IntelFlashDescriptorConstants.FlashRegionType.toString(region.getType()));
+					IntelFlashDescriptorConstants.FlashRegionType.toString(region.getType()));
 			fsih.storeFileWithParent(regionName, null, -1, false, region.length(), region);
 		}
 	}
 
 	@Override
-	public String getName() {
-		return fsFSRL.getContainer().getName();
-	}
-
-	@Override
-	public FSRLRoot getFSRL() {
-		return fsFSRL;
-	}
-
-	@Override
-	public boolean isClosed() {
-		return provider == null;
-	}
-
-	@Override
-	public FileSystemRefManager getRefManager() {
-		return refManager;
+	public GFile lookup(String path) {
+		return fsih.lookup(path);
 	}
 
 	@Override
@@ -85,9 +69,25 @@ public class IntelFlashFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getInfo(GFile file, TaskMonitor monitor) {
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public ByteProvider getByteProvider(GFile file, TaskMonitor monitor) throws IOException {
 		IntelFlashRegion region = fsih.getMetadata(file);
-		return (region != null) ? region.toString() : null;
+		return new ByteProviderWrapper(region.getByteProvider(), file.getFSRL());
+	}
+
+	@Override
+	public FileAttributes getFileAttributes(GFile file, TaskMonitor monitor) {
+		IntelFlashRegion region = fsih.getMetadata(file);
+		return region.getFileAttributes();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
 	}
 
 	@Override
@@ -96,14 +96,12 @@ public class IntelFlashFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public GFile lookup(String path) throws IOException {
-		return fsih.lookup(path);
+	public String getName() {
+		return fsFSRL.getContainer().getName();
 	}
 
 	@Override
-	public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
-		IntelFlashRegion region = fsih.getMetadata(file);
-		return region.getData();
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
-
 }

@@ -25,6 +25,8 @@ import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
@@ -126,22 +128,22 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	private static final int SIGNATURE_OFFSET = 40;
 
 	// Original header fields
-	private byte[] zeroVector;
-	private UUID fileSystemGuid;
-	private long size;
-	private int signature;
-	private int attributes;
-	private short headerSize;
-	private short checksum;
-	private short extendedHeaderOffset;
-	private byte revision;
+	private final byte[] zeroVector;
+	private final UUID fileSystemGuid;
+	private final long size;
+	private final int signature;
+	private final int attributes;
+	private final short headerSize;
+	private final short checksum;
+	private final short extendedHeaderOffset;
+	private final byte revision;
 
 	// Extended header fields
 	private UUID fvName;
 	private int extendedHeaderSize;
 
-	private long baseIndex;
-	private boolean checksumValid;
+	private final long baseIndex;
+	private final boolean checksumValid;
 
 	/**
 	 * Constructs a UEFIFirmwareVolumeHeader from a specified BinaryReader and adds it to a specified
@@ -286,25 +288,25 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	}
 
 	/**
-	 * Returns a string representation of the current firmware volume.
+	 * Returns FileAttributes for the current FFS file.
 	 *
-	 * @return a string representation of the current firmware volume
+	 * @return FileAttributes for the current FFS file
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Firmware volume base: 0x%X\n", baseIndex);
-		formatter.format("Firmware volume FS GUID: %s\n", fileSystemGuid.toString());
-		formatter.format("Firmware volume size: 0x%X\n", size);
-		formatter.format("Firmware volume attributes: 0x%X\n", attributes);
-		formatter.format("Firmware volume header size: 0x%X\n", headerSize);
-		formatter.format("Firmware volume checksum: 0x%X (%s)\n", checksum, checksumValid ? "valid" : "invalid");
-		formatter.format("Firmware volume revision: %d", revision);
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, getName());
+		attributes.add(FileAttributeType.SIZE_ATTR, size);
+		attributes.add("Base", String.format("%#x", baseIndex));
+		attributes.add("File System GUID", fileSystemGuid.toString());
+		attributes.add("Attributes", String.format("%#x", this.attributes));
+		attributes.add("Header Size", headerSize);
+		attributes.add("Header Checksum", String.format("%#x (%s)", checksum, checksumValid ? "valid" : "invalid"));
+		attributes.add("Revision", revision);
 		if (revision == 2 && extendedHeaderOffset > 0) {
-			formatter.format("\nFirmware volume name GUID: %s\n", fvName.toString());
-			formatter.format("Firmware volume extended header size: 0x%X", extendedHeaderSize);
+			attributes.add("Name GUID", fvName.toString());
+			attributes.add("Extended Header Size", extendedHeaderSize);
 		}
 
-		return formatter.toString();
+		return attributes;
 	}
 }

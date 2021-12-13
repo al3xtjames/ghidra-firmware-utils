@@ -16,9 +16,7 @@
 
 package firmware.uefi_fv;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
@@ -29,8 +27,6 @@ import ghidra.formats.gfilesystem.GFile;
  * section is treated as the body.
  */
 public class FFSGenericSection extends FFSSection {
-	private byte[] data;
-
 	/**
 	 * Constructs a FFSGenericSection from a specified BinaryReader.
 	 *
@@ -38,7 +34,7 @@ public class FFSGenericSection extends FFSSection {
 	 */
 	public FFSGenericSection(BinaryReader reader) throws IOException {
 		super(reader);
-		data = reader.readNextByteArray((int) length());
+		reader.setPointerIndex(reader.getPointerIndex() + length());
 	}
 
 	/**
@@ -55,15 +51,5 @@ public class FFSGenericSection extends FFSSection {
 
 		// Add this section to the current FS.
 		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
-	}
-
-	/**
-	 * Returns an InputStream for the contents of the current FFS section.
-	 *
-	 * @return an InputStream for the contents of the current FFS section
-	 */
-	@Override
-	public InputStream getData() {
-		return new ByteArrayInputStream(data);
 	}
 }

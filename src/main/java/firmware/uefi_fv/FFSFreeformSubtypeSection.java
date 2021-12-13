@@ -16,15 +16,16 @@
 
 package firmware.uefi_fv;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.UUID;
 
 import firmware.common.UUIDUtils;
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * Parser for FFS freeform sections, which have the following specific field:
@@ -42,8 +43,9 @@ import ghidra.formats.gfilesystem.GFile;
  */
 public class FFSFreeformSubtypeSection extends FFSSection {
 	// Original header fields
-	private UUID subTypeGuid;
-	private byte[] data;
+	private final UUID subTypeGuid;
+
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs a FFSFreeformSubtypeSection from a specified BinaryReader and adds it to a
@@ -58,20 +60,21 @@ public class FFSFreeformSubtypeSection extends FFSSection {
 		super(reader);
 
 		subTypeGuid = UUIDUtils.fromBinaryReader(reader);
-		data = reader.readNextByteArray((int) length());
+		provider = new ByteProviderWrapper(reader.getByteProvider(), reader.getPointerIndex(), length());
+		reader.setPointerIndex(reader.getPointerIndex() + length());
 
 		// Add this section to the current FS.
 		fsih.storeFileWithParent(getName(), parent, -1, false, length(), this);
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current freeform section.
+	 * Returns a ByteProvider for the contents of the current freeform section.
 	 *
-	 * @return an InputStream for the contents of the current freeform section
+	 * @return a ByteProvider for the contents of the current freeform section
 	 */
 	@Override
-	public InputStream getData() {
-		return new ByteArrayInputStream(data);
+	public ByteProvider getByteProvider() {
+		return provider;
 	}
 
 	/**
@@ -105,13 +108,13 @@ public class FFSFreeformSubtypeSection extends FFSSection {
 	}
 
 	/**
-	 * Returns a string representation of the current freeform section.
+	 * Returns FileAttributes for the current freeform section.
 	 *
-	 * @return a string representation of the current freeform section
+	 * @return FileAttributes for the current freeform section
 	 */
-	@Override
-	public String toString() {
-		return super.toString() +
-				"\nSubtype GUID: " + subTypeGuid.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("Subtype GUID", subTypeGuid.toString());
+		return attributes;
 	}
 }

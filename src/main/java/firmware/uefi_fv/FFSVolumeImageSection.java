@@ -17,9 +17,9 @@
 package firmware.uefi_fv;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
 
@@ -50,14 +50,14 @@ public class FFSVolumeImageSection extends FFSSection {
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current firmware volume image section. This
+	 * Returns a ByteProvider for the contents of the current firmware volume image section. This
 	 * will return null, as it shouldn't be possible to call this; firmware volume image sections
 	 * are added to the FS as directories.
 	 *
-	 * @return an InputStream for the contents of the current firmware volume image section
+	 * @return a ByteProvider for the contents of the current firmware volume image section
 	 */
 	@Override
-	public InputStream getData() {
+	public ByteProvider getByteProvider() {
 		return null;
 	}
 }

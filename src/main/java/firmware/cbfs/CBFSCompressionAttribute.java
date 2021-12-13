@@ -41,8 +41,8 @@ import java.io.IOException;
  */
 public class CBFSCompressionAttribute extends CBFSFileAttribute {
 	// Original header fields
-	int compressionType;
-	long uncompressedSize;
+	private final int compressionType;
+	private final long uncompressedSize;
 
 	/**
 	 * Constructs a CBFSCompressionAttribute from a specified BinaryReader.

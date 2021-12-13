@@ -17,21 +17,23 @@
 package firmware.uefi_fv;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InvalidObjectException;
 import java.util.List;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.formats.gfilesystem.*;
 import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
 @FileSystemInfo(type = "fv", description = "UEFI Firmware Volume", factory = UEFIFirmwareVolumeFileSystemFactory.class)
 public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
 	private final FSRLRoot fsFSRL;
-	private FileSystemIndexHelper<UEFIFile> fsih;
-	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private final FileSystemIndexHelper<UEFIFile> fsih;
+	private final FileSystemRefManager refManager = new FileSystemRefManager(this);
 	private ByteProvider provider;
 
 	public UEFIFirmwareVolumeFileSystem(FSRLRoot fsFSRL) {
@@ -58,23 +60,8 @@ public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getName() {
-		return fsFSRL.getContainer().getName();
-	}
-
-	@Override
-	public FSRLRoot getFSRL() {
-		return fsFSRL;
-	}
-
-	@Override
-	public boolean isClosed() {
-		return provider == null;
-	}
-
-	@Override
-	public FileSystemRefManager getRefManager() {
-		return refManager;
+	public GFile lookup(String path) throws IOException {
+		return fsih.lookup(path);
 	}
 
 	@Override
@@ -88,9 +75,36 @@ public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getInfo(GFile file, TaskMonitor monitor) {
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public ByteProvider getByteProvider(GFile file, TaskMonitor monitor) throws IOException {
 		UEFIFile fvFile = fsih.getMetadata(file);
-		return (fvFile != null) ? fvFile.toString() : null;
+		ByteProvider provider;
+		if (fvFile instanceof FFSSection) {
+			provider = ((FFSSection) fvFile).getByteProvider();
+		}
+		else if (fvFile instanceof FFSRawFile) {
+			provider = ((FFSRawFile) fvFile).getByteProvider();
+		}
+		else {
+			throw new InvalidObjectException("Not a valid FFS file");
+		}
+
+		return new ByteProviderWrapper(provider, file.getFSRL());
+	}
+
+	@Override
+	public FileAttributes getFileAttributes(GFile file, TaskMonitor monitor) {
+		UEFIFile fvFile = fsih.getMetadata(file);
+		return fvFile.getFileAttributes();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
 	}
 
 	@Override
@@ -99,22 +113,13 @@ public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public GFile lookup(String path) throws IOException {
-		return fsih.lookup(path);
+	public String getName() {
+		return fsFSRL.getContainer().getName();
 	}
 
 	@Override
-	public InputStream getInputStream(GFile file, TaskMonitor monitor)
-			throws IOException, CancelledException {
-		UEFIFile fvFile = fsih.getMetadata(file);
-		if (fvFile instanceof FFSSection) {
-			return ((FFSSection) fvFile).getData();
-		}
-		else if (fvFile instanceof FFSRawFile) {
-			return ((FFSRawFile) fvFile).getData();
-		}
-
-		return null;
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
 
 	public static String getFSFormattedName(UEFIFile file, GFile parent,
@@ -123,5 +128,4 @@ public class UEFIFirmwareVolumeFileSystem implements GFileSystem {
 		String typeStr = (file instanceof UEFIFirmwareVolumeHeader) ? "Volume" : "File";
 		return String.format("%s %03d - %s", typeStr, fileCount, file.getName());
 	}
-
 }

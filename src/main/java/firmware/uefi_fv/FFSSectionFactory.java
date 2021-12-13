@@ -40,10 +40,10 @@ public class FFSSectionFactory {
 	public static FFSSection parseSection(BinaryReader reader) throws IOException {
 		byte type = reader.readByte(reader.getPointerIndex() + 3);
 		switch (type) {
-		case UEFIFFSConstants.SectionType.USER_INTERFACE:
-			return new FFSUISection(reader);
-		default:
-			return new FFSGenericSection(reader);
+			case UEFIFFSConstants.SectionType.USER_INTERFACE:
+				return new FFSUISection(reader);
+			default:
+				return new FFSGenericSection(reader);
 		}
 	}
 

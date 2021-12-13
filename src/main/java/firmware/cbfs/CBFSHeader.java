@@ -17,7 +17,7 @@
 package firmware.cbfs;
 
 import ghidra.app.util.bin.BinaryReader;
-import ghidra.app.util.bin.InputStreamByteProvider;
+import ghidra.util.exception.CancelledException;
 
 import java.io.IOException;
 
@@ -43,28 +43,26 @@ import java.io.IOException;
  */
 public class CBFSHeader extends CBFSFile {
 	// Original header fields
-	private String signature;
-	private long version;
-	private long romSize;
-	private long bootBlockSize;
-	private int alignment;
-	private long offset;
-	private int architecture;
+	private final String signature;
+	private final long version;
+	private final long romSize;
+	private final long bootBlockSize;
+	private final int alignment;
+	private final long offset;
+	private final int architecture;
 
 	/**
 	 * Constructs a CBFSHeader from a specified BinaryReader.
 	 *
 	 * @param reader the specified BinaryReader
 	 */
-	public CBFSHeader(BinaryReader reader) throws IOException {
+	public CBFSHeader(BinaryReader reader) throws IOException, CancelledException {
 		super(reader);
 		if (getType() != CBFSConstants.FileType.CBFS_HEADER) {
 			throw new IOException("Not a valid CBFS header");
 		}
 
-		InputStreamByteProvider provider = new InputStreamByteProvider(getData(),
-				getData().available());
-		BinaryReader headerReader = new BinaryReader(provider, false);
+		BinaryReader headerReader = new BinaryReader(getByteProvider(), false);
 
 		signature = headerReader.readNextAsciiString(CBFSConstants.CBFS_HEADER_SIGNATURE.length());
 		if (!signature.equals(CBFSConstants.CBFS_HEADER_SIGNATURE)) {

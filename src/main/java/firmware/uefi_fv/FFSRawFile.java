@@ -16,21 +16,24 @@
 
 package firmware.uefi_fv;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Formatter;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * UEFIFile implementation for the contents of a raw FFS file.
  */
 public class FFSRawFile implements UEFIFile {
-	private long base;
-	private byte[] data;
+	private final long base;
+	private final int length;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs a FFSRawFile from a specified BinaryReader and adds it to a
@@ -43,20 +46,22 @@ public class FFSRawFile implements UEFIFile {
 	public FFSRawFile(BinaryReader reader, int length, FileSystemIndexHelper<UEFIFile> fsih, GFile parent)
 			throws IOException {
 		base = reader.getPointerIndex();
-		data = reader.readNextByteArray(length);
+		this.length = length;
+		provider = new ByteProviderWrapper(reader.getByteProvider(), base, length);
+		reader.setPointerIndex(reader.getPointerIndex() + length);
 
 		// Add this file to the FS.
-		fsih.storeFileWithParent(UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1, false,
-				length(), this);
+		fsih.storeFileWithParent(UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih), parent, -1,
+				false, length(), this);
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current raw FFS file.
+	 * Returns a ByteProvider for the contents of the current raw FFS file.
 	 *
-	 * @return an InputStream for the contents of the current raw FFS file
+	 * @return a ByteProvider for the contents of the current raw FFS file
 	 */
-	public InputStream getData() {
-		return new ByteArrayInputStream(data);
+	public ByteProvider getByteProvider() {
+		return provider;
 	}
 
 	/**
@@ -76,19 +81,18 @@ public class FFSRawFile implements UEFIFile {
 	 */
 	@Override
 	public long length() {
-		return data.length;
+		return length;
 	}
 
 	/**
-	 * Returns a string representation of the current raw FFS file.
+	 * Returns FileAttributes for the current GUID-defined section.
 	 *
-	 * @return a string representation of the current raw FFS file
+	 * @return FileAttributes for the current GUID-defined section
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Base: 0x%X\n", base);
-		formatter.format("Size: 0x%X", data.length);
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.SIZE_ATTR, length);
+		attributes.add("Base", String.format("%#x", base));
+		return attributes;
 	}
 }

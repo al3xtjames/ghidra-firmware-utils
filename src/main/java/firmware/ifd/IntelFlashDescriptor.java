@@ -134,17 +134,17 @@ import ghidra.util.Msg;
  */
 public class IntelFlashDescriptor {
 	// Original header fields
-	private int signature;
+	private final int signature;
 
 	// FLMAP0 fields
-	private short componentBase;
-	private byte numFlashChips;
-	private short regionBase;
-	private byte numRegions;
+	private final short componentBase;
+	private final byte numFlashChips;
+	private final short regionBase;
+	private final byte numRegions;
 
-	private long headerOffset;
-	private int ifdVersion;
-	private List<IntelFlashRegion> regions;
+	private final long headerOffset;
+	private final int ifdVersion;
+	private final List<IntelFlashRegion> regions;
 
 	/**
 	 * Constructs an IntelFlashDescriptor from a specified BinaryReader.
@@ -231,7 +231,7 @@ public class IntelFlashDescriptor {
 		reader.setPointerIndex(headerOffset);
 		regions.add(new IntelFlashRegion(reader, IntelFlashDescriptorConstants.DESCRIPTOR_SIZE,
 				IntelFlashDescriptorConstants.FlashRegionType.FLASH_DESCRIPTOR));
-		if ((biosLimit + 1 - biosBase) * 0x1000 == reader.length() - headerOffset) {
+		if ((biosLimit + 1 - biosBase) * 0x1000L == reader.length() - headerOffset) {
 			// For some older Gigabyte systems, the BIOS region in the flash descriptor spans the
 			// whole chip. Manually calculate the BIOS region base address using the ME region's
 			// limit address (which should be correct).

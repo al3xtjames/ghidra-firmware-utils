@@ -40,9 +40,8 @@ public class LegacyOptionROMLoader extends AbstractLibrarySupportLoader {
 	public Collection<LoadSpec> findSupportedLoadSpecs(ByteProvider provider) {
 		ArrayList<LoadSpec> loadSpecs = new ArrayList<>();
 		BinaryReader reader = new BinaryReader(provider, true);
-		LegacyOptionROMHeader header = null;
 		try {
-			header = new LegacyOptionROMHeader(reader);
+			new LegacyOptionROMHeader(reader);
 		} catch (IOException e) {
 			return loadSpecs;
 		}

@@ -17,13 +17,14 @@
 package firmware.cbfs;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.formats.gfilesystem.*;
 import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
@@ -31,8 +32,8 @@ import ghidra.util.task.TaskMonitor;
 @FileSystemInfo(type = "cbfs", description = "Coreboot File System", factory = CBFSFileSystemFactory.class)
 public class CBFSFileSystem implements GFileSystem {
 	private final FSRLRoot fsFSRL;
-	private FileSystemIndexHelper<CBFSFile> fsih;
-	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private final FileSystemIndexHelper<CBFSFile> fsih;
+	private final FileSystemRefManager refManager = new FileSystemRefManager(this);
 	private ByteProvider provider;
 
 	public CBFSFileSystem(FSRLRoot fsFSRL) {
@@ -60,7 +61,7 @@ public class CBFSFileSystem implements GFileSystem {
 			reader.align(header.getAlignment());
 			String name = cbfsFile.getName().length() > 0 ? cbfsFile.getName().replace('/', '_') : "(empty)";
 			Msg.debug(this, String.format("%s size = 0x%X, data offset = 0x%X, type = %s", name, cbfsFile.length(),
-				cbfsFile.getOffset(), CBFSConstants.FileType.toString(cbfsFile.getType())));
+					cbfsFile.getOffset(), CBFSConstants.FileType.toString(cbfsFile.getType())));
 
 			// Ignore empty CBFS files (used for padding).
 			if (cbfsFile.getType() == CBFSConstants.FileType.NULL) {
@@ -72,23 +73,8 @@ public class CBFSFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getName() {
-		return fsFSRL.getContainer().getName();
-	}
-
-	@Override
-	public FSRLRoot getFSRL() {
-		return fsFSRL;
-	}
-
-	@Override
-	public boolean isClosed() {
-		return provider == null;
-	}
-
-	@Override
-	public FileSystemRefManager getRefManager() {
-		return refManager;
+	public GFile lookup(String path) {
+		return fsih.lookup(path);
 	}
 
 	@Override
@@ -103,9 +89,25 @@ public class CBFSFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getInfo(GFile file, TaskMonitor monitor) {
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public ByteProvider getByteProvider(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
 		CBFSFile cbfsFile = fsih.getMetadata(file);
-		return (cbfsFile != null) ? cbfsFile.toString() : null;
+		return new ByteProviderWrapper(cbfsFile.getByteProvider(), file.getFSRL());
+	}
+
+	@Override
+	public FileAttributes getFileAttributes(GFile file, TaskMonitor monitor) {
+		CBFSFile cbfsFile = fsih.getMetadata(file);
+		return cbfsFile.getFileAttributes();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
 	}
 
 	@Override
@@ -114,13 +116,12 @@ public class CBFSFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public GFile lookup(String path) throws IOException {
-		return fsih.lookup(path);
+	public String getName() {
+		return fsFSRL.getContainer().getName();
 	}
 
 	@Override
-	public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
-		CBFSFile cbfsFile = fsih.getMetadata(file);
-		return cbfsFile.getData();
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
 }

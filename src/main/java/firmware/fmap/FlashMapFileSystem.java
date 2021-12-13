@@ -17,21 +17,21 @@
 package firmware.fmap;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.formats.gfilesystem.*;
 import ghidra.formats.gfilesystem.annotations.FileSystemInfo;
-import ghidra.util.exception.CancelledException;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.util.task.TaskMonitor;
 
 @FileSystemInfo(type = "fmap", description = "Flash Map", factory = FlashMapFileSystemFactory.class)
 public class FlashMapFileSystem implements GFileSystem {
 	private final FSRLRoot fsFSRL;
-	private FileSystemIndexHelper<FlashMapArea> fsih;
-	private FileSystemRefManager refManager = new FileSystemRefManager(this);
+	private final FileSystemIndexHelper<FlashMapArea> fsih;
+	private final FileSystemRefManager refManager = new FileSystemRefManager(this);
 	private ByteProvider provider;
 
 	public FlashMapFileSystem(FSRLRoot fsFSRL) {
@@ -51,23 +51,8 @@ public class FlashMapFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getName() {
-		return fsFSRL.getContainer().getName();
-	}
-
-	@Override
-	public FSRLRoot getFSRL() {
-		return fsFSRL;
-	}
-
-	@Override
-	public boolean isClosed() {
-		return provider == null;
-	}
-
-	@Override
-	public FileSystemRefManager getRefManager() {
-		return refManager;
+	public GFile lookup(String path) {
+		return fsih.lookup(path);
 	}
 
 	@Override
@@ -82,9 +67,25 @@ public class FlashMapFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public String getInfo(GFile file, TaskMonitor monitor) {
+	public boolean isClosed() {
+		return provider == null;
+	}
+
+	@Override
+	public ByteProvider getByteProvider(GFile file, TaskMonitor monitor) throws IOException {
 		FlashMapArea area = fsih.getMetadata(file);
-		return (area != null) ? area.toString() : null;
+		return new ByteProviderWrapper(area.getByteProvider(), file.getFSRL());
+	}
+
+	@Override
+	public FileAttributes getFileAttributes(GFile file, TaskMonitor monitor) {
+		FlashMapArea area = fsih.getMetadata(file);
+		return area.getFileAttributes();
+	}
+
+	@Override
+	public FSRLRoot getFSRL() {
+		return fsFSRL;
 	}
 
 	@Override
@@ -93,13 +94,12 @@ public class FlashMapFileSystem implements GFileSystem {
 	}
 
 	@Override
-	public GFile lookup(String path) throws IOException {
-		return fsih.lookup(path);
+	public String getName() {
+		return fsFSRL.getContainer().getName();
 	}
 
 	@Override
-	public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
-		FlashMapArea area = fsih.getMetadata(file);
-		return area.getData();
+	public FileSystemRefManager getRefManager() {
+		return refManager;
 	}
 }

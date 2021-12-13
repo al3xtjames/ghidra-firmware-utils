@@ -21,7 +21,8 @@ import java.util.UUID;
 /**
  * Various UEFI Firmware File System (FFS) constants.
  */
-public final class UEFIFFSConstants {
+public final class
+UEFIFFSConstants {
 	// Size of the UEFI FFS header structure
 	public static final int FFS_HEADER_SIZE = 24;
 
