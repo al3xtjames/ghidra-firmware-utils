@@ -293,7 +293,11 @@ public class IntelFlashDescriptor {
 			return;
 		}
 
-		reader.setPointerIndex(headerOffset + base * 0x1000);
+		if (base * 0x1000L + size > reader.length()) {
+			throw new IOException("Out-of-bounds flash region");
+		}
+
+		reader.setPointerIndex(headerOffset + base * 0x1000L);
 		regions.add(new IntelFlashRegion(reader, size, type));
 		Msg.debug(this, String.format("Adding %s region (base = 0x%X, size = 0x%X",
 				IntelFlashDescriptorConstants.FlashRegionType.toString(type), base * 0x1000,
