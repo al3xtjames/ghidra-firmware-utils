@@ -69,14 +69,20 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		imageSize = reader.readNextByte();
 		entryPointInstruction = reader.readNextByteArray(3);
 
-		// The entry point field usually contains a relative JMP instruction. Decode it to find the
-		// address of the entry point.
+		// The entry point field usually contains a relative CALL or JMP instruction. Decode it to find the address of
+		// the entry point.
 		entryPointOffset = 0x3;
-		if (entryPointInstruction[0] == (byte) 0xEB) {
+		if (entryPointInstruction[0] == (byte) 0xE8) {
+			// CALL rel16 (relative to next instruction)
+			entryPointOffset += ((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
+			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
+		}
+		else if (entryPointInstruction[0] == (byte) 0xEB) {
 			// JMP rel8 (relative to next instruction)
 			entryPointOffset += entryPointInstruction[1] & 0xFF;
 			entryPointOffset += 0x2; // Size of the instruction (offset to next instruction)
-		} else if (entryPointInstruction[0] == (byte) 0xE9) {
+		}
+		else if (entryPointInstruction[0] == (byte) 0xE9) {
 			// JMP rel16 (relative to next instruction)
 			entryPointOffset += ((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
 			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
