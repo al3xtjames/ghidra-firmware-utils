@@ -108,9 +108,9 @@ public class CBFSFile {
 		// Extract the file if compression is used (specified in a compression attribute).
 		if (attribute != null && attribute instanceof CBFSCompressionAttribute) {
 			InputStream is = new ByteArrayInputStream(data);
-
 			int compressionType = ((CBFSCompressionAttribute) attribute).getCompressionType();
 			switch (compressionType) {
+				case CBFSConstants.CompressionAlgorithm.NONE: break;
 				case CBFSConstants.CompressionAlgorithm.LZMA: is = new LZMACompressorInputStream(is); break;
 				case CBFSConstants.CompressionAlgorithm.LZ4: is = new FramedLZ4CompressorInputStream(is); break;
 				default: throw new IOException("Unsupported CBFS compression type: " + compressionType);
