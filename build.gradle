@@ -95,11 +95,11 @@ task copyLibraries(type: Copy, dependsOn: "efidecompressSharedLibrary") {
 	}
 
 	if (Os.isFamily(Os.FAMILY_MAC)) {
-		from "$buildDir/libs/efidecompress/shared/libefidecompress.dylib" into "os/osx64"
+		from "$buildDir/libs/efidecompress/shared/libefidecompress.dylib" into "os/mac_x86_64"
 	} else if (Os.isFamily(Os.FAMILY_UNIX)) {
-		from "$buildDir/libs/efidecompress/shared/libefidecompress.so" into "os/linux64"
+		from "$buildDir/libs/efidecompress/shared/libefidecompress.so" into "os/linux_x86_64"
 	} else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-		from "$buildDir/libs/efidecompress/shared/efidecompress.dll" into "os/win64"
+		from "$buildDir/libs/efidecompress/shared/efidecompress.dll" into "os/win_x86_64"
 	}
 }
 
