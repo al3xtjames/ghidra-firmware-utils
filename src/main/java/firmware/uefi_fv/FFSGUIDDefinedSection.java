@@ -17,11 +17,12 @@
 package firmware.uefi_fv;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Formatter;
 import java.util.UUID;
 import java.util.zip.CRC32;
 
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 
 import firmware.common.EFIDecompressor;
@@ -57,9 +58,9 @@ import ghidra.util.Msg;
  */
 public class FFSGUIDDefinedSection extends FFSSection {
 	// Original header fields
-	private UUID sectionDefinitionGuid;
-	private short dataOffset;
-	private short attributes;
+	private final UUID sectionDefinitionGuid;
+	private final short dataOffset;
+	private final short attributes;
 
 	/**
 	 * Constructs a FFSGUIDDefinedSection from a specified BinaryReader and adds it to a specified
@@ -185,7 +186,7 @@ public class FFSGUIDDefinedSection extends FFSSection {
 	 * @return an InputStream for the contents of the current GUID-defined section
 	 */
 	@Override
-	public InputStream getData() {
+	public ByteProvider getByteProvider() {
 		return null;
 	}
 
@@ -223,17 +224,15 @@ public class FFSGUIDDefinedSection extends FFSSection {
 	}
 
 	/**
-	 * Returns a string representation of the current GUID-defined section.
+	 * Returns FileAttributes for the current GUID-defined section.
 	 *
-	 * @return a string representation of the current GUID-defined section
+	 * @return FileAttributes for the current GUID-defined section
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("%s\n", super.toString());
-		formatter.format("Section definition GUID: %s\n", sectionDefinitionGuid.toString());
-		formatter.format("Data offset: 0x%X\n", dataOffset);
-		formatter.format("Attributes: 0x%X", attributes);
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("Section Definition GUID", sectionDefinitionGuid.toString());
+		attributes.add("Data Offset", dataOffset);
+		attributes.add("Attributes", String.format("%#x", this.attributes));
+		return attributes;
 	}
 }

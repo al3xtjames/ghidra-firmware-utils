@@ -18,6 +18,7 @@ package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.StructConverter;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
@@ -33,7 +34,7 @@ import java.util.Formatter;
  * used to calculate the device list's location.
  */
 public class DeviceList implements StructConverter {
-	private ArrayList<Short> deviceList;
+	private final ArrayList<Short> deviceList;
 
 	/**
 	 * Constructs a DeviceList from a specified BinaryReader.
@@ -51,6 +52,22 @@ public class DeviceList implements StructConverter {
 		}
 	}
 
+	/**
+	 * Returns FileAttributes for the current image.
+	 *
+	 * @return FileAttributes for the current image
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		Formatter formatter = new Formatter();
+		for (short deviceID : deviceList) {
+			formatter.format("0x%02X ", deviceID);
+		}
+
+		attributes.add("Supported Device IDs", formatter.toString());
+		return attributes;
+	}
+
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("device_list_t", 0);
@@ -61,16 +78,5 @@ public class DeviceList implements StructConverter {
 
 		structure.add(WORD, 2, "terminator", null);
 		return structure;
-	}
-
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Supported Device IDs: ");
-		for (short deviceID : deviceList) {
-			formatter.format("0x%02X ", deviceID);
-		}
-
-		return formatter.toString();
 	}
 }

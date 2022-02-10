@@ -29,6 +29,7 @@ public class EFIDecompressor {
 		} catch (Throwable t) {
 			Msg.showError(EFIDecompressor.class, null, "EFI Decompressor",
 					"Failed to load libefidecompress native library");
+			Msg.error(EFIDecompressor.class, t);
 		}
 	}
 

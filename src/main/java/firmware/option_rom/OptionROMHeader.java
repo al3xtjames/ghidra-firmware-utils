@@ -16,17 +16,18 @@
 
 package firmware.option_rom;
 
+import firmware.common.FileAttributeUtils;
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
 import ghidra.app.util.bin.StructConverter;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Formatter;
 
 /**
  * Common parser for PCI expansion ROMs.
@@ -81,12 +82,12 @@ import java.util.Formatter;
  */
 public class OptionROMHeader implements StructConverter {
 	// Original header fields
-	private short signature;
-	private int pcirOffset;
+	private final short signature;
+	private final int pcirOffset;
 
-	private PCIDataStructureHeader pcirHeader;
+	private final PCIDataStructureHeader pcirHeader;
 	private DeviceList deviceList;
-	private byte[] rawImage;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs an OptionROMHeader from a specified BinaryReader.
@@ -112,8 +113,20 @@ public class OptionROMHeader implements StructConverter {
 		}
 
 		// Copy the contents of the entire image.
-		reader.setPointerIndex(0);
-		rawImage = reader.readNextByteArray(pcirHeader.getImageLength());
+		provider = new ByteProviderWrapper(reader.getByteProvider(), 0, pcirHeader.getImageLength());
+	}
+
+	/**
+	 * Returns a ByteProvider for the contents of the image. Subclasses may override this to return
+	 * an enclosed executable instead of the raw image.
+	 *
+	 * @return a ByteProvider for the contents of the image
+	 */
+	public ByteProvider getByteProvider() {
+		// For a generic option ROM with an unknown code type, just return the entire ROM as the
+		// image. This will be overridden by subclasses (UEFIOptionROMHeader, etc) to only return
+		// the executable.
+		return provider;
 	}
 
 	/**
@@ -123,19 +136,6 @@ public class OptionROMHeader implements StructConverter {
 	 */
 	public DeviceList getDeviceList() {
 		return deviceList;
-	}
-
-	/**
-	 * Returns an InputStream for the contents of the image. Subclasses may override this to return
-	 * an enclosed executable instead of the raw image.
-	 *
-	 * @return an InputStream for the contents of the image
-	 */
-	public InputStream getImageStream() {
-		// For a generic option ROM with an unknown code type, just return the entire ROM as the
-		// image. This will be overridden by subclasses (UEFIOptionROMHeader, etc) to only return
-		// the executable.
-		return new ByteArrayInputStream(rawImage);
 	}
 
 	/**
@@ -156,6 +156,22 @@ public class OptionROMHeader implements StructConverter {
 		return pcirOffset;
 	}
 
+	/**
+	 * Returns FileAttributes for the current image.
+	 *
+	 * @return FileAttributes for the current image
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add("PCI Data Structure Offset", pcirOffset);
+		FileAttributeUtils.addAll(attributes, pcirHeader.getFileAttributes());
+		if (deviceList != null) {
+			FileAttributeUtils.addAll(attributes, deviceList.getFileAttributes());
+		}
+
+		return attributes;
+	}
+
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("option_rom_header_t", 0);
@@ -163,17 +179,5 @@ public class OptionROMHeader implements StructConverter {
 		structure.add(new ArrayDataType(BYTE, 0x16, 1), "reserved", null);
 		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
-	}
-
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("PCI Data Structure Offset: 0x%X\n", pcirOffset);
-		formatter.format("%s", pcirHeader.toString());
-		if (deviceList != null) {
-			formatter.format("\n%s", deviceList.toString());
-		}
-
-		return formatter.toString();
 	}
 }

@@ -17,11 +17,12 @@
 package firmware.fmap;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Formatter;
 
 /**
  * Parser for flash areas, which have the following structure:
@@ -42,12 +43,12 @@ import java.util.Formatter;
  */
 public class FlashMapArea {
 	// Original header fields
-	private long offset;
-	private int size;
-	private String name;
-	private short flags;
+	private final long offset;
+	private final int size;
+	private final String name;
+	private final short flags;
 
-	private byte[] data;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs a FlashMapArea from a specified BinaryReader.
@@ -60,19 +61,16 @@ public class FlashMapArea {
 		name = reader.readNextAsciiString(FlashMapConstants.FMAP_NAME_LEN).trim();
 		flags = reader.readNextShort();
 
-		long previousIndex = reader.getPointerIndex();
-		reader.setPointerIndex(offset);
-		data = reader.readNextByteArray(size);
-		reader.setPointerIndex(previousIndex);
+		provider = new ByteProviderWrapper(reader.getByteProvider(), offset, size);
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current flash area.
+	 * Returns a ByteProvider for the contents of the current flash area.
 	 *
-	 * @return an InputStream for the contents of the current flash area
+	 * @return a ByteProvider for the contents of the current flash area
 	 */
-	public InputStream getData() {
-		return new ByteArrayInputStream(data);
+	public ByteProvider getByteProvider() {
+		return provider;
 	}
 
 	/**
@@ -102,14 +100,17 @@ public class FlashMapArea {
 		return size;
 	}
 
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Flash area name: %s\n", name);
-		formatter.format("Flash area offset: 0x%X\n", offset);
-		formatter.format("Flash area size: 0x%X\n", size);
-		formatter.format("Flash area flags: %s (0x%X)",
-				FlashMapConstants.FlashAreaFlags.toString(flags), flags);
-		return formatter.toString();
+	/**
+	 * Returns FileAttributes for the current flash area.
+	 *
+	 * @return FileAttributes for the current flash area
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, name);
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
+		attributes.add("Offset", offset);
+		attributes.add("Flags", FlashMapConstants.FlashAreaFlags.toString(flags));
+		return attributes;
 	}
 }

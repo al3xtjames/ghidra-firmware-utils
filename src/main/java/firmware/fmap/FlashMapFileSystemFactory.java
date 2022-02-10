@@ -16,26 +16,28 @@
 
 package firmware.fmap;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.FSRL;
 import ghidra.formats.gfilesystem.FSRLRoot;
 import ghidra.formats.gfilesystem.FileSystemService;
-import ghidra.formats.gfilesystem.factory.GFileSystemFactoryFull;
-import ghidra.formats.gfilesystem.factory.GFileSystemProbeFull;
+import ghidra.formats.gfilesystem.factory.GFileSystemFactoryByteProvider;
+import ghidra.formats.gfilesystem.factory.GFileSystemProbeByteProvider;
 import ghidra.util.Msg;
-import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
-public class FlashMapFileSystemFactory implements GFileSystemFactoryFull<FlashMapFileSystem>, GFileSystemProbeFull {
+public class FlashMapFileSystemFactory implements GFileSystemFactoryByteProvider<FlashMapFileSystem>,
+		GFileSystemProbeByteProvider {
 	@Override
-	public FlashMapFileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL, ByteProvider provider, File containerFile,
-			FileSystemService fsService, TaskMonitor monitor) throws IOException, CancelledException {
+	public boolean probe(ByteProvider provider, FileSystemService fsService, TaskMonitor monitor) throws IOException {
+		return findFMapSignatureOffset(provider) != -1;
+	}
 
-		FlashMapFileSystem fs = new FlashMapFileSystem(targetFSRL);
+	@Override
+	public FlashMapFileSystem create(FSRLRoot fsrlRoot, ByteProvider provider, FileSystemService fsService,
+			TaskMonitor monitor) throws IOException {
+		FlashMapFileSystem fs = new FlashMapFileSystem(fsrlRoot);
 		try {
 			long offset = findFMapSignatureOffset(provider);
 			if (offset < 0) {
@@ -48,12 +50,6 @@ public class FlashMapFileSystemFactory implements GFileSystemFactoryFull<FlashMa
 			fs.close();
 			throw ioe;
 		}
-	}
-
-	@Override
-	public boolean probe(FSRL containerFSRL, ByteProvider provider, File containerFile, FileSystemService fsService,
-			TaskMonitor monitor) throws IOException, CancelledException {
-		return findFMapSignatureOffset(provider) != -1;
 	}
 
 	private long findFMapSignatureOffset(ByteProvider provider) throws IOException {

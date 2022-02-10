@@ -47,15 +47,15 @@ import java.io.IOException;
  */
 public class FlashMapHeader {
 	// Original header fields
-	private String signature;
-	private int majorVersion;
-	private int minorVersion;
-	private long baseAddress;
-	private long size;
-	private String name;
-	private int numAreas;
+	private final String signature;
+	private final int majorVersion;
+	private final int minorVersion;
+	private final long baseAddress;
+	private final long size;
+	private final String name;
+	private final int numAreas;
 
-	private FlashMapArea[] areas;
+	private final FlashMapArea[] areas;
 
 	/**
 	 * Constructs a FlashMapHeader from a specified BinaryReader.

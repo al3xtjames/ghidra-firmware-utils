@@ -18,15 +18,16 @@ package firmware.option_rom;
 
 import firmware.common.EFIDecompressor;
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Formatter;
 
 /**
  * Parser for UEFI option ROM images. There are additional fields in the ROM header:
@@ -57,16 +58,14 @@ import java.util.Formatter;
  */
 public class UEFIOptionROMHeader extends OptionROMHeader {
 	// Original header fields
-	private short imageSize;
-	private int efiSignature;
-	private short efiSubsystem;
-	private short efiMachineType;
-	private short efiCompressionType;
-	private short efiImageOffset;
+	private final short imageSize;
+	private final int efiSignature;
+	private final short efiSubsystem;
+	private final short efiMachineType;
+	private final short efiCompressionType;
+	private final short efiImageOffset;
 
-	// The EFI PE32+ executable stored in the option ROM
-	// May be compressed with the EFI Compression Algorithm
-	private byte[] efiImage;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs a UEFIOptionROMHeader from a specified BinaryReader.
@@ -93,24 +92,41 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 		efiCompressionType = reader.readNextShort();
 		reader.setPointerIndex(0x16);
 		efiImageOffset = reader.readNextShort();
-		reader.setPointerIndex(efiImageOffset);
+
 		int efiExecutableSize = imageSize * OptionROMConstants.ROM_SIZE_UNIT - efiImageOffset;
-		efiImage = reader.readNextByteArray(efiExecutableSize);
+		if (efiCompressionType == 1) {
+			// Decompress EFI executables that were compressed with the EFI Compression Algorithm.
+			reader.setPointerIndex(efiImageOffset);
+			byte[] compressedExecutable = reader.readNextByteArray(efiExecutableSize);
+			provider = new ByteArrayProvider(EFIDecompressor.decompress(compressedExecutable));
+		} else {
+			provider = new ByteProviderWrapper(reader.getByteProvider(), efiImageOffset, efiExecutableSize);
+		}
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the EFI PE32+ executable. Compressed executables
+	 * Returns a ByteProvider for the contents of the EFI PE32+ executable. Compressed executables
 	 * will be transparently decompressed before returning.
 	 *
-	 * @return an InputStream for the contents of the EFI PE32+ executable
+	 * @return a ByteProvider for the contents of the EFI PE32+ executable
 	 */
 	@Override
-	public InputStream getImageStream() {
-		if (efiCompressionType == 1) {
-			return new ByteArrayInputStream(EFIDecompressor.decompress(efiImage));
-		} else {
-			return new ByteArrayInputStream(efiImage);
-		}
+	public ByteProvider getByteProvider() {
+		return provider;
+	}
+
+	/**
+	 * Returns FileAttributes for the current image.
+	 *
+	 * @return FileAttributes for the current image
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("EFI Subsystem", OptionROMConstants.EFIImageSubsystem.toString(efiSubsystem));
+		attributes.add("EFI Machine Type", OptionROMConstants.EFIImageMachineType.toString(efiMachineType));
+		attributes.add("EFI Image Compressed", efiCompressionType == 1);
+		attributes.add("EFI Image Offset", efiImageOffset);
+		return attributes;
 	}
 
 	@Override
@@ -126,18 +142,5 @@ public class UEFIOptionROMHeader extends OptionROMHeader {
 		structure.add(POINTER, 2,"efi_image_offset", null);
 		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
-	}
-
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("EFI Subsystem: %s\n",
-				OptionROMConstants.EFIImageSubsystem.toString(efiSubsystem));
-		formatter.format("EFI Machine Type: %s\n",
-				OptionROMConstants.EFIImageMachineType.toString(efiMachineType));
-		formatter.format("EFI Image Compression: %b\n", efiCompressionType == 1);
-		formatter.format("EFI Image Offset: 0x%X\n", efiImageOffset);
-		formatter.format("%s", super.toString());
-		return formatter.toString();
 	}
 }

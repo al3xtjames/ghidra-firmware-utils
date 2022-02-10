@@ -16,13 +16,12 @@
 
 package firmware.uefi_fv;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.formats.gfilesystem.FileSystemIndexHelper;
 import ghidra.formats.gfilesystem.GFile;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * Parser for FFS UI sections, which have the following specific field:
@@ -40,7 +39,7 @@ import ghidra.formats.gfilesystem.GFile;
  */
 public class FFSUISection extends FFSSection {
 	// Original header fields
-	private String uiText;
+	private final String uiText;
 
 	/**
 	 * Constructs a FFSUISection from a specified BinaryReader.
@@ -70,16 +69,6 @@ public class FFSUISection extends FFSSection {
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current UI section.
-	 *
-	 * @return an InputStream for the contents of the current UI section
-	 */
-	@Override
-	public InputStream getData() {
-		return new ByteArrayInputStream(uiText.getBytes());
-	}
-
-	/**
 	 * Returns the text in the current UI section.
 	 *
 	 * @return the text in the current UI section
@@ -89,13 +78,13 @@ public class FFSUISection extends FFSSection {
 	}
 
 	/**
-	 * Returns a string representation of the current UI section.
+	 * Returns FileAttributes for the current UI section.
 	 *
-	 * @return a string representation of the current UI section
+	 * @return FileAttributes for the current UI section
 	 */
-	@Override
-	public String toString() {
-		return super.toString() +
-				"\nSection text: " + uiText;
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("Section Text", uiText);
+		return attributes;
 	}
 }

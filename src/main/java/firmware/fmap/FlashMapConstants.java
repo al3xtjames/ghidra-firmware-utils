@@ -35,7 +35,7 @@ public final class FlashMapConstants {
 		public static final byte READ_ONLY = 1 << 2;
 		public static final byte PRESERVE = 1 << 3;
 
-		public static final String toString(short flags) {
+		public static String toString(short flags) {
 			Formatter formatter = new Formatter();
 			if (flags == 0) {
 				formatter.format("None ");

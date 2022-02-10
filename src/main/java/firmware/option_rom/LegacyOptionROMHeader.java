@@ -17,13 +17,14 @@
 package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
+import ghidra.util.Msg;
 
 import java.io.IOException;
-import java.util.Formatter;
 
 /**
  * Parser for legacy x86/PC compatible option ROM images. There are additional fields in the ROM
@@ -46,8 +47,8 @@ import java.util.Formatter;
  */
 public class LegacyOptionROMHeader extends OptionROMHeader {
 	// Original header fields
-	private byte imageSize;
-	private byte[] entryPointInstruction;
+	private final byte imageSize;
+	private final byte[] entryPointInstruction;
 
 	private int entryPointOffset;
 
@@ -68,19 +69,28 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		imageSize = reader.readNextByte();
 		entryPointInstruction = reader.readNextByteArray(3);
 
-		// The entry point field usually contains a relative JMP instruction. Decode it to find the
-		// address of the entry point.
+		// The entry point field usually contains a relative CALL or JMP instruction. Decode it to find the address of
+		// the entry point.
 		entryPointOffset = 0x3;
-		if (entryPointInstruction[0] == (byte) 0xEB) {
-			// JMP rel8 (relative to next instruction)
-			entryPointOffset += entryPointInstruction[1];
-			entryPointOffset += 0x2; // Size of the instruction (offset to next instruction)
-		} else if (entryPointInstruction[0] == (byte) 0xE9) {
-			// JMP rel16 (relative to next instruction)
-			entryPointOffset += (short)
-					((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF);
+		if (entryPointInstruction[0] == (byte) 0xE8) {
+			// CALL rel16 (relative to next instruction)
+			entryPointOffset += ((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
 			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
 		}
+		else if (entryPointInstruction[0] == (byte) 0xEB) {
+			// JMP rel8 (relative to next instruction)
+			entryPointOffset += entryPointInstruction[1] & 0xFF;
+			entryPointOffset += 0x2; // Size of the instruction (offset to next instruction)
+		}
+		else if (entryPointInstruction[0] == (byte) 0xE9) {
+			// JMP rel16 (relative to next instruction)
+			entryPointOffset += ((entryPointInstruction[2] & 0xFF) << 8 | entryPointInstruction[1] & 0xFF) & 0xFFFF;
+			entryPointOffset += 0x3; // Size of the instruction (offset to next instruction)
+		}
+
+		Msg.debug(this, String.format("Entry point instruction: %x %x %x", entryPointInstruction[0],
+				entryPointInstruction[1], entryPointInstruction[2]));
+		Msg.debug(this, String.format("Entry point offset: %#x", entryPointOffset));
 
 		reader.setPointerIndex(0);
 	}
@@ -94,6 +104,19 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		return entryPointOffset;
 	}
 
+	/**
+	 * Returns FileAttributes for the current image.
+	 *
+	 * @return FileAttributes for the current image
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = super.getFileAttributes();
+		attributes.add("Entry Point Instruction", String.format("%02X %02X %02X", entryPointInstruction[0],
+				entryPointInstruction[1], entryPointInstruction[2]));
+		attributes.add("Decoded Entry Point Address", String.format("%#x", entryPointOffset));
+		return attributes;
+	}
+
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("x86_option_rom_header_t", 0);
@@ -103,15 +126,5 @@ public class LegacyOptionROMHeader extends OptionROMHeader {
 		structure.add(new ArrayDataType(BYTE, 0x12, 1), "reserved", null);
 		structure.add(POINTER, 2, "pcir_offset", null);
 		return structure;
-	}
-
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Entry Point Instruction: %02X %02X %02X\n", entryPointInstruction[0],
-				entryPointInstruction[1], entryPointInstruction[2]);
-		formatter.format("Decoded Entry Point Address: 0x%X\n", entryPointOffset);
-		formatter.format("%s", super.toString());
-		return formatter.toString();
 	}
 }

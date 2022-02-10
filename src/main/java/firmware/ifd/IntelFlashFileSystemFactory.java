@@ -16,33 +16,28 @@
 
 package firmware.ifd;
 
-import java.io.File;
 import java.io.IOException;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
-import ghidra.formats.gfilesystem.FSRL;
 import ghidra.formats.gfilesystem.FSRLRoot;
 import ghidra.formats.gfilesystem.FileSystemService;
-import ghidra.formats.gfilesystem.factory.GFileSystemFactoryFull;
-import ghidra.formats.gfilesystem.factory.GFileSystemProbeFull;
+import ghidra.formats.gfilesystem.factory.GFileSystemFactoryByteProvider;
+import ghidra.formats.gfilesystem.factory.GFileSystemProbeByteProvider;
 import ghidra.util.Msg;
-import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
-public class IntelFlashFileSystemFactory implements GFileSystemFactoryFull<IntelFlashFileSystem>, GFileSystemProbeFull {
+public class IntelFlashFileSystemFactory implements GFileSystemFactoryByteProvider<IntelFlashFileSystem>,
+		GFileSystemProbeByteProvider {
 	@Override
-	public boolean probe(FSRL containerFSRL, ByteProvider provider, File containerFile, FileSystemService fsService,
-			TaskMonitor monitor) throws IOException, CancelledException {
+	public boolean probe(ByteProvider provider, FileSystemService fsService, TaskMonitor monitor) throws IOException {
 		return findIFDSignatureOffset(provider) != -1;
 	}
 
 	@Override
-	public IntelFlashFileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL, ByteProvider provider,
-			File containerFile, FileSystemService fsService, TaskMonitor monitor)
-			throws IOException, CancelledException {
-
-		IntelFlashFileSystem fs = new IntelFlashFileSystem(targetFSRL);
+	public IntelFlashFileSystem create(FSRLRoot fsrlRoot, ByteProvider provider, FileSystemService fsService,
+			TaskMonitor monitor) throws IOException {
+		IntelFlashFileSystem fs = new IntelFlashFileSystem(fsrlRoot);
 		try {
 			long offset = findIFDSignatureOffset(provider);
 			if (offset < 0) {

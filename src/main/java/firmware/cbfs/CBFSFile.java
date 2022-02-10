@@ -20,8 +20,16 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Formatter;
 
+import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.formats.gfilesystem.FSUtilities;
+import ghidra.formats.gfilesystem.FileCache;
+import ghidra.formats.gfilesystem.FileSystemService;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 
@@ -49,15 +57,15 @@ import ghidra.app.util.bin.BinaryReader;
  */
 public class CBFSFile {
 	// Original header fields
-	private byte[] signature;
-	private int size;
-	private int type;
-	private long attributesOffset;
-	private long offset;
-	private String name;
+	private final byte[] signature;
+	private final int size;
+	private final int type;
+	private final long attributesOffset;
+	private final long offset;
+	private final String name;
 
 	private CBFSFileAttribute attribute;
-	private byte[] data;
+	private final byte[] data;
 
 	/**
 	 * Constructs a CBFSFile from a specified BinaryReader.
@@ -91,25 +99,30 @@ public class CBFSFile {
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current file. Compressed files will be
+	 * Returns a ByteProvider for the contents of the current file. Compressed files will be
 	 * wrapped in a CompressorInputStream for transparent extraction.
 	 *
-	 * @return an InputStream for the contents of the current file
+	 * @return a ByteProvider for the contents of the current file
 	 */
-	public InputStream getData() throws IOException {
-		ByteArrayInputStream dataInputStream = new ByteArrayInputStream(data);
-
+	public ByteProvider getByteProvider() throws IOException, CancelledException {
 		// Extract the file if compression is used (specified in a compression attribute).
 		if (attribute != null && attribute instanceof CBFSCompressionAttribute) {
-			switch (((CBFSCompressionAttribute) attribute).getCompressionType()) {
-				case CBFSConstants.CompressionAlgorithm.LZMA:
-					return new LZMACompressorInputStream(dataInputStream);
-				case CBFSConstants.CompressionAlgorithm.LZ4:
-					return new FramedLZ4CompressorInputStream(dataInputStream);
+			InputStream is = new ByteArrayInputStream(data);
+			int compressionType = ((CBFSCompressionAttribute) attribute).getCompressionType();
+			switch (compressionType) {
+				case CBFSConstants.CompressionAlgorithm.NONE: break;
+				case CBFSConstants.CompressionAlgorithm.LZMA: is = new LZMACompressorInputStream(is); break;
+				case CBFSConstants.CompressionAlgorithm.LZ4: is = new FramedLZ4CompressorInputStream(is); break;
+				default: throw new IOException("Unsupported CBFS compression type: " + compressionType);
 			}
-		}
 
-		return dataInputStream;
+			FileCache.FileCacheEntryBuilder tmpFileBuilder = FileSystemService.getInstance().createTempFile(-1);
+			FSUtilities.streamCopy(is, tmpFileBuilder, TaskMonitor.DUMMY);
+			FileCache.FileCacheEntry fce = tmpFileBuilder.finish();
+			return FileSystemService.getInstance().getNamedTempFile(fce, name);
+		} else {
+			return new ByteArrayProvider(data);
+		}
 	}
 
 	/**
@@ -148,24 +161,30 @@ public class CBFSFile {
 		return size;
 	}
 
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("CBFS file name: %s\n", name);
-		formatter.format("CBFS file size: 0x%X\n", size);
-		formatter.format("CBFS file type: %s (0x%X)\n", CBFSConstants.FileType.toString(type),
-				type);
+	/**
+	 * Returns FileAttributes for the current file.
+	 *
+	 * @return FileAttributes for the current file
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, name);
+		attributes.add("File Type", CBFSConstants.FileType.toString(type));
 		if (attribute != null && attribute instanceof CBFSCompressionAttribute) {
 			switch (((CBFSCompressionAttribute) attribute).getCompressionType()) {
 				case CBFSConstants.CompressionAlgorithm.LZMA:
-					formatter.format("CBFS file attribute: Compressed (LZMA)");
-					break;
+					attributes.add("Compression Type", "LZMA");
 				case CBFSConstants.CompressionAlgorithm.LZ4:
-					formatter.format("CBFS file attribute: Compressed (LZ4)");
+					attributes.add("Compression Type", "LZ4");
+					attributes.add(FileAttributeType.COMPRESSED_SIZE_ATTR, size);
 					break;
+				default:
+					attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
 			}
+		} else {
+			attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
 		}
 
-		return formatter.toString();
+		return attributes;
 	}
 }

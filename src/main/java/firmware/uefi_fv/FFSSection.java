@@ -17,10 +17,13 @@
 package firmware.uefi_fv;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Formatter;
 
 import ghidra.app.util.bin.BinaryReader;
+import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.ByteProviderWrapper;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
  * Parser for the common FFS section header, which has the following fields:
@@ -41,10 +44,11 @@ import ghidra.app.util.bin.BinaryReader;
 public abstract class FFSSection implements UEFIFile {
 	// Original header fields
 	private int size;
-	private byte type;
+	private final byte type;
 
-	private long baseIndex;
+	private final long baseIndex;
 	private boolean hasExtendedSize;
+	private final ByteProvider provider;
 
 	/**
 	 * Constructs a UEFIFFSFile from a specified BinaryReader.
@@ -63,15 +67,18 @@ public abstract class FFSSection implements UEFIFile {
 		}
 
 		size -= UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+		provider = new ByteProviderWrapper(reader.getByteProvider(), reader.getPointerIndex(), length());
 	}
 
 	/**
-	 * Returns an InputStream for the contents of the current FFS section. This must be implemented
-	 * by subclasses of FFSSection.
+	 * Returns a ByteProvider for the contents of the current FFS section. Subclasses of FFSSection may override this
+	 * as needed.
 	 *
-	 * @return an InputStream for the contents of the current FFS section
+	 * @return a ByteProvider for the contents of the current FFS section
 	 */
-	public abstract InputStream getData();
+	public ByteProvider getByteProvider() {
+		return provider;
+	}
 
 	/**
 	 * Returns the length of the header for the current FFS section.
@@ -126,18 +133,17 @@ public abstract class FFSSection implements UEFIFile {
 	}
 
 	/**
-	 * Returns a string representation of the current FFS section.
+	 * Returns FileAttributes for the current FFS section.
 	 *
-	 * @return a string representation of the current FFS section
+	 * @return FileAttributes for the current FFS section
 	 */
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Section base: 0x%X\n", baseIndex);
-		formatter.format("Section type: %s (0x%X)\n", UEFIFFSConstants.SectionType.toString(type),
-				type);
-		formatter.format("Section header size: 0x%X\n", getHeaderLength());
-		formatter.format("Section body size: 0x%X", length());
-		return formatter.toString();
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.NAME_ATTR, getName());
+		attributes.add(FileAttributeType.SIZE_ATTR, length());
+		attributes.add("Base", String.format("%#x", baseIndex));
+		attributes.add("Section Type", UEFIFFSConstants.SectionType.toString(type));
+		attributes.add("Header Size", getHeaderLength());
+		return attributes;
 	}
 }

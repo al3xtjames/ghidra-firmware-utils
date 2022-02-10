@@ -14,33 +14,27 @@
  * limitations under the License.
  */
 
-package firmware.uefi_fv;
+package firmware.common;
 
+import ghidra.formats.gfilesystem.fileinfo.FileAttribute;
 import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 
 /**
- * Interface for UEFI firmware volume contents, such as UEFIFirmwareVolumes, UEIFFFSFiles, and
- * FFSSections.
+ * Various FileAttributes utilities.
  */
-public interface UEFIFile {
-	/**
-	 * Returns the name of the current file.
-	 *
-	 * @return the name of the current file
-	 */
-	String getName();
+public class FileAttributeUtils {
+	private FileAttributeUtils() {}
 
 	/**
-	 * Returns the length of the current file.
+	 * Adds all FileAttributes from src to dest.
 	 *
-	 * @return the length of the current file
+	 * @param dest the destination FileAttributes object
+	 * @param src the source FileAttributes object
 	 */
-	long length();
-
-	/**
-	 * Returns FileAttributes for the current image.
-	 *
-	 * @return FileAttributes for the current image
-	 */
-	FileAttributes getFileAttributes();
+	public static void addAll(FileAttributes dest, FileAttributes src) {
+		for (FileAttribute<?> attribute : src.getAttributes()) {
+			dest.add(attribute.getAttributeType(), attribute.getAttributeDisplayName(),
+					attribute.getAttributeValue());
+		}
+	}
 }

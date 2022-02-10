@@ -42,9 +42,9 @@ import java.io.IOException;
  */
 public class CBFSFileAttribute {
 	// Original header fields
-	private int tag;
-	private int size;
-	private byte[] data;
+	private final int tag;
+	private final int size;
+	private final byte[] data;
 
 	/**
 	 * Constructs a FlashMapArea from a specified BinaryReader.

@@ -18,13 +18,14 @@ package firmware.option_rom;
 
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.StructConverter;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributeType;
+import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
 
 import java.io.IOException;
-import java.util.Formatter;
 
 /**
  * Parser for the PCI data structure stored within PCI option ROM images. See OptionROMHeader for a
@@ -32,20 +33,20 @@ import java.util.Formatter;
  */
 public class PCIDataStructureHeader implements StructConverter {
 	// Original header fields
-	private String signature;
-	private short vendorID;
-	private short deviceID;
-	private short deviceListOffset;
-	private short headerSize;
-	private short headerRevision;
-	private byte[] classCode;
-	private short imageLength;
-	private short romRevision;
-	private byte codeType;
-	private byte lastImageIndicator;
-	private short maxRuntimeSize;
-	private short configUtilityCodeOffset;
-	private short dmtfClpOffset;
+	private final String signature;
+	private final short vendorID;
+	private final short deviceID;
+	private final short deviceListOffset;
+	private final short headerSize;
+	private final short headerRevision;
+	private final byte[] classCode;
+	private final short imageLength;
+	private final short romRevision;
+	private final byte codeType;
+	private final byte lastImageIndicator;
+	private final short maxRuntimeSize;
+	private final short configUtilityCodeOffset;
+	private final short dmtfClpOffset;
 
 	/**
 	 * Constructs a PCIDataStructureHeader from a specified BinaryReader.
@@ -120,6 +121,21 @@ public class PCIDataStructureHeader implements StructConverter {
 		return (lastImageIndicator & 0x80) != 0;
 	}
 
+	/**
+	 * Returns FileAttributes for the current image.
+	 *
+	 * @return FileAttributes for the current image
+	 */
+	public FileAttributes getFileAttributes() {
+		FileAttributes attributes = new FileAttributes();
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(getImageLength()));
+		attributes.add("Vendor ID", String.format("%#x", vendorID));
+		attributes.add("Device ID", String.format("%#x", deviceID));
+		attributes.add("Vendor ROM Revision", romRevision);
+		attributes.add("Code Type", OptionROMConstants.CodeType.toString(codeType));
+		return attributes;
+	}
+
 	@Override
 	public DataType toDataType() {
 		Structure structure = new StructureDataType("pci_data_structure_header_t", 0);
@@ -149,18 +165,5 @@ public class PCIDataStructureHeader implements StructConverter {
 		}
 
 		return structure;
-	}
-
-	@Override
-	public String toString() {
-		Formatter formatter = new Formatter();
-		formatter.format("Vendor ID: 0x%X\n", vendorID);
-		formatter.format("Device ID: 0x%X\n", deviceID);
-		formatter.format("Image Length: 0x%X\n", getImageLength());
-		formatter.format("Vendor ROM Revision: 0x%X\n", romRevision);
-		formatter.format("Code Type: %s (%d)\n", OptionROMConstants.CodeType.toString(codeType),
-				codeType);
-		formatter.format("Last Image: %b", isLastImage());
-		return formatter.toString();
 	}
 }

@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  GHIDRA_VERSION: 10.0.4
-  GHIDRA_DATE: 20210928
+  GHIDRA_VERSION: 10.1.2
+  GHIDRA_DATE: 20220125
 
 jobs:
   build-macos:
@@ -35,7 +35,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: libefidecompress.dylib
-          path: os/osx64/libefidecompress.dylib
+          path: os/mac_x86_64/libefidecompress.dylib
 
   build-windows:
     runs-on: windows-latest
@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: efidecompress.dll
-          path: os/win64/efidecompress.dll
+          path: os/win_x86_64/efidecompress.dll
 
   build-linux:
     needs: [build-macos, build-windows]
@@ -89,13 +89,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: libefidecompress.dylib
-          path: os/osx64
+          path: os/mac_x86_64
 
       - name: Download Windows JNI library
         uses: actions/download-artifact@v2
         with:
           name: efidecompress.dll
-          path: os/win64
+          path: os/win_x86_64
 
       - name: Build plugin with Gradle
         run: |
