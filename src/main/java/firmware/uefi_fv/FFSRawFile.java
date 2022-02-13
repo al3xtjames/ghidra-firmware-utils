@@ -91,7 +91,7 @@ public class FFSRawFile implements UEFIFile {
 	 */
 	public FileAttributes getFileAttributes() {
 		FileAttributes attributes = new FileAttributes();
-		attributes.add(FileAttributeType.SIZE_ATTR, length);
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(length));
 		attributes.add("Base", String.format("%#x", base));
 		return attributes;
 	}

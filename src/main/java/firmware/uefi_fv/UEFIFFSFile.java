@@ -200,7 +200,7 @@ public class UEFIFFSFile implements UEFIFile {
 	public FileAttributes getFileAttributes() {
 		FileAttributes attributes = new FileAttributes();
 		attributes.add(FileAttributeType.NAME_ATTR, getName());
-		attributes.add(FileAttributeType.SIZE_ATTR, size);
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
 		attributes.add("GUID", nameGuid.toString());
 		attributes.add("Header Checksum", String.format("%#x", headerChecksum));
 		attributes.add("File Checksum", String.format("%#x", fileChecksum));
