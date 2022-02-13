@@ -111,9 +111,9 @@ task cleanLibraries(type: Delete) {
 	}
 
 	delete fileTree("os").matching {
-		include "osx64/*.dylib"
-		include "linux64/*.so"
-		include "win64/*.dll"
+		include "mac_x86_64/*.dylib"
+		include "linux_x86_64/*.so"
+		include "win_x86_64/*.dll"
 	}
 }
 
