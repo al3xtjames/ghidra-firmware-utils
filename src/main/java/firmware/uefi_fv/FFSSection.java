@@ -140,7 +140,7 @@ public abstract class FFSSection implements UEFIFile {
 	public FileAttributes getFileAttributes() {
 		FileAttributes attributes = new FileAttributes();
 		attributes.add(FileAttributeType.NAME_ATTR, getName());
-		attributes.add(FileAttributeType.SIZE_ATTR, length());
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(length()));
 		attributes.add("Base", String.format("%#x", baseIndex));
 		attributes.add("Section Type", UEFIFFSConstants.SectionType.toString(type));
 		attributes.add("Header Size", getHeaderLength());

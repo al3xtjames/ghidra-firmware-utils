@@ -16,9 +16,7 @@
 
 package firmware.uefi_fv;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Formatter;
 import java.util.UUID;
 
 import firmware.common.UUIDUtils;
@@ -134,17 +132,28 @@ public class UEFIFFSFile implements UEFIFile {
 		GFile fileImpl = fsih.storeFileWithParent(UEFIFirmwareVolumeFileSystem.getFSFormattedName(this, parent, fsih),
 				parent, -1, true, -1, this);
 
+		long remainingLength = size - UEFIFFSConstants.FFS_HEADER_SIZE;
 		if (type == UEFIFFSConstants.FileType.RAW) {
-			// Raw sections may contain a nested firmware volume.
-			long currentIndex = reader.getPointerIndex();
-			try {
-				new UEFIFirmwareVolumeHeader(reader, fsih, fileImpl, true);
-			} catch (IOException e) {
-				reader.setPointerIndex(currentIndex);
-				new FFSRawFile(reader, (int) size - UEFIFFSConstants.FFS_HEADER_SIZE, fsih, fileImpl);
+			long fvEndIndex = reader.getPointerIndex();
+			long ffsEndIndex = reader.getPointerIndex() + remainingLength;
+			while (remainingLength > UEFIFFSConstants.FFS_SECTION_HEADER_SIZE) {
+				// Raw sections may contain nested firmware volumes.
+				long currentIndex = reader.getPointerIndex();
+				try {
+					UEFIFirmwareVolumeHeader fvh = new UEFIFirmwareVolumeHeader(reader, fsih, fileImpl, true);
+					remainingLength -= fvh.length();
+					fvEndIndex += fvh.length();
+				} catch (IOException e) {
+					reader.setPointerIndex(currentIndex + 1);
+					remainingLength--;
+				}
+			}
+
+			if (fvEndIndex < ffsEndIndex) {
+				reader.setPointerIndex(fvEndIndex);
+				new FFSRawFile(reader, (int) (ffsEndIndex - fvEndIndex), fsih, fileImpl);
 			}
 		} else {
-			long remainingLength = size - UEFIFFSConstants.FFS_HEADER_SIZE;
 			// Parse and add each section to the FS.
 			while (remainingLength > UEFIFFSConstants.FFS_SECTION_HEADER_SIZE) {
 				FFSSection section = FFSSectionFactory.parseSection(reader, fsih, fileImpl);
@@ -200,7 +209,7 @@ public class UEFIFFSFile implements UEFIFile {
 	public FileAttributes getFileAttributes() {
 		FileAttributes attributes = new FileAttributes();
 		attributes.add(FileAttributeType.NAME_ATTR, getName());
-		attributes.add(FileAttributeType.SIZE_ATTR, size);
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
 		attributes.add("GUID", nameGuid.toString());
 		attributes.add("Header Checksum", String.format("%#x", headerChecksum));
 		attributes.add("File Checksum", String.format("%#x", fileChecksum));

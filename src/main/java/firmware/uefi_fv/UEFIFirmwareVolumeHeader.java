@@ -295,7 +295,7 @@ public class UEFIFirmwareVolumeHeader implements UEFIFile {
 	public FileAttributes getFileAttributes() {
 		FileAttributes attributes = new FileAttributes();
 		attributes.add(FileAttributeType.NAME_ATTR, getName());
-		attributes.add(FileAttributeType.SIZE_ATTR, size);
+		attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
 		attributes.add("Base", String.format("%#x", baseIndex));
 		attributes.add("File System GUID", fileSystemGuid.toString());
 		attributes.add("Attributes", String.format("%#x", this.attributes));
