@@ -21,6 +21,7 @@ import firmware.uefi_te.TerseExecutableHeader;
 import generic.continues.RethrowContinuesFactory;
 import ghidra.app.decompiler.*;
 import ghidra.app.plugin.core.datamgr.archive.DuplicateIdException;
+import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
 import ghidra.app.script.GhidraScript;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
@@ -71,7 +72,8 @@ public class UEFIHelper extends GhidraScript {
 	private DataTypeManager loadDataTypeLibrary(String name) throws DuplicateIdException,
 			IOException {
 		// Check if the data type library was already loaded.
-		DataTypeManagerService service = state.getTool().getService(DataTypeManagerService.class);
+		AutoAnalysisManager aam = AutoAnalysisManager.getAnalysisManager(currentProgram);
+		DataTypeManagerService service = aam.getDataTypeManagerService();
 		DataTypeManager[] managers = service.getDataTypeManagers();
 		for (DataTypeManager manager : managers) {
 			if (manager.getName().equals(name)) {
@@ -80,7 +82,7 @@ public class UEFIHelper extends GhidraScript {
 		}
 
 		// Load the data type library from the plugin's data directory.
-		return service.openArchive(loadDataFile(name), false).getDataTypeManager();
+		return service.openDataTypeArchive(name);
 	}
 
 	/**
