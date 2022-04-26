@@ -17,6 +17,7 @@
 package firmware.cbfs;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.formats.gfilesystem.FSRL;
@@ -26,14 +27,13 @@ import ghidra.formats.gfilesystem.factory.GFileSystemFactoryByteProvider;
 import ghidra.formats.gfilesystem.factory.GFileSystemProbeBytesOnly;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
-import utilities.util.ArrayUtilities;
 
 public class CBFSFileSystemFactory implements GFileSystemFactoryByteProvider<CBFSFileSystem>,
 		GFileSystemProbeBytesOnly {
 	@Override
 	public boolean probeStartBytes(FSRL containerFSRL, byte[] startBytes) {
-		return ArrayUtilities.arrayRangesEquals(CBFSConstants.CBFS_FILE_SIGNATURE, 0, startBytes, 0,
-				CBFSConstants.CBFS_FILE_SIGNATURE.length);
+		return Arrays.equals(startBytes, 0, CBFSConstants.CBFS_FILE_SIGNATURE.length,
+				CBFSConstants.CBFS_FILE_SIGNATURE, 0, CBFSConstants.CBFS_FILE_SIGNATURE.length);
 	}
 
 	@Override
