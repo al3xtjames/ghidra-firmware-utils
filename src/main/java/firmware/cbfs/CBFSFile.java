@@ -176,7 +176,7 @@ public class CBFSFile {
 					attributes.add("Compression Type", "LZMA");
 				case CBFSConstants.CompressionAlgorithm.LZ4:
 					attributes.add("Compression Type", "LZ4");
-					attributes.add(FileAttributeType.COMPRESSED_SIZE_ATTR, size);
+					attributes.add(FileAttributeType.COMPRESSED_SIZE_ATTR, Long.valueOf(size));
 					break;
 				default:
 					attributes.add(FileAttributeType.SIZE_ATTR, Long.valueOf(size));
