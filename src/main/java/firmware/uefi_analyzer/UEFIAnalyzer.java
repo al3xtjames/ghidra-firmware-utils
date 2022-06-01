@@ -62,7 +62,7 @@ public class UEFIAnalyzer extends AbstractAnalyzer {
 		DXE_MODULE("DXE Module"),
 		PEI_MODULE("PEI Module");
 
-		private String optionDisplayString;
+		private final String optionDisplayString;
 
 		UEFIModuleType(String optionDisplayString) {
 			this.optionDisplayString = optionDisplayString;
@@ -162,7 +162,7 @@ public class UEFIAnalyzer extends AbstractAnalyzer {
 		}
 
 		// This shouldn't be possible (canAnalyze should have returned false), but check anyways.
-		if (subsystem < PeSubsystem.IMAGE_SUBSYSTEM_EFI_APPLICATION.ordinal() &&
+		if (subsystem < PeSubsystem.IMAGE_SUBSYSTEM_EFI_APPLICATION.ordinal() ||
 				subsystem > PeSubsystem.IMAGE_SUBSYSTEM_EFI_ROM.ordinal()) {
 			Msg.error(this, String.format("Current program is not a UEFI binary (subsystem = %d)", subsystem));
 			return false;
