@@ -233,11 +233,10 @@ public class UEFIAnalyzer extends AbstractAnalyzer {
 	 */
 	private static NTHeader parseNTHeader(Program program)
 			throws InvalidNTHeaderException, IOException, MemoryAccessException {
-		MemoryBlock peBlock = program.getMemory().getBlock(PeLoader.HEADERS);
-		byte[] blockBytes = new byte[(int) peBlock.getSize()];
-		peBlock.getBytes(peBlock.getStart(), blockBytes);
+		byte[] programBytes = new byte[(int) program.getMemory().getSize()];
+		program.getMemory().getBytes(program.getImageBase(), programBytes);
 		FactoryBundledWithBinaryReader reader = new FactoryBundledWithBinaryReader(
-				RethrowContinuesFactory.INSTANCE, new ByteArrayProvider(blockBytes), true);
+				RethrowContinuesFactory.INSTANCE, new ByteArrayProvider(programBytes), true);
 		int ntHeaderOffset = reader.readInt(0x3C);
 		return NTHeader.createNTHeader(reader, ntHeaderOffset,
 				PortableExecutable.SectionLayout.FILE, false, false);
