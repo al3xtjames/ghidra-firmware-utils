@@ -13,10 +13,10 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'adopt'
@@ -32,7 +32,7 @@ jobs:
         run: ./gradlew
 
       - name: Upload to Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: libefidecompress.dylib
           path: os/mac_x86_64/libefidecompress.dylib
@@ -40,10 +40,10 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'adopt'
@@ -59,7 +59,7 @@ jobs:
         run: ./gradlew.bat
 
       - name: Upload to Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: efidecompress.dll
           path: os/win_x86_64/efidecompress.dll
@@ -68,12 +68,12 @@ jobs:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'adopt'
@@ -86,13 +86,13 @@ jobs:
         working-directory: /tmp
 
       - name: Download macOS JNI library
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: libefidecompress.dylib
           path: os/mac_x86_64
 
       - name: Download Windows JNI library
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: efidecompress.dll
           path: os/win_x86_64
@@ -112,7 +112,7 @@ jobs:
           mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: dist/*.zip
 
