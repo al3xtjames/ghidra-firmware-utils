@@ -151,10 +151,13 @@ public class IntelFlashDescriptor {
 	 *
 	 * @param reader the specified BinaryReader
 	 */
-	public IntelFlashDescriptor(BinaryReader reader) throws IOException {
-		// Skip the IFD vector (16 0xFF bytes).
+	public IntelFlashDescriptor(BinaryReader reader, boolean hasZeroVector) throws IOException {
+		// Skip the IFD vector (16 0xFF bytes) if it's present.
+		// Some BIOSes may not include this (observed on HP Compaq dc7900).
 		headerOffset = reader.getPointerIndex();
-		reader.setPointerIndex(reader.getPointerIndex() + 16);
+		if (hasZeroVector) {
+			reader.setPointerIndex(reader.getPointerIndex() + 16);
+		}
 
 		signature = reader.readNextInt();
 		if (signature != IntelFlashDescriptorConstants.IFD_SIGNATURE) {

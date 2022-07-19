@@ -40,9 +40,13 @@ public class IntelFlashFileSystem implements GFileSystem {
 	public void mount(ByteProvider provider, long offset, TaskMonitor monitor) throws IOException {
 		this.provider = provider;
 		BinaryReader reader = new BinaryReader(provider, true);
+		boolean hasZeroVector = offset >= 16;
 
-		reader.setPointerIndex(offset - 16);
-		IntelFlashDescriptor ifd = new IntelFlashDescriptor(reader);
+		if (hasZeroVector) {
+			reader.setPointerIndex(offset - 16);
+		}
+
+		IntelFlashDescriptor ifd = new IntelFlashDescriptor(reader, hasZeroVector);
 		List<IntelFlashRegion> regions = ifd.getRegions();
 
 		for (IntelFlashRegion region : regions) {
