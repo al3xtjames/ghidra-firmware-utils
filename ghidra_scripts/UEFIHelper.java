@@ -414,7 +414,7 @@ public class UEFIHelper extends GhidraScript {
 			peBlock.getBytes(peBlock.getStart(), blockBytes);
 			BinaryReader reader = new BinaryReader(new ByteArrayProvider(blockBytes), true);
 			int ntHeaderOffset = reader.readInt(0x3C);
-			NTHeader ntHeader = NTHeader.createNTHeader(reader, ntHeaderOffset,
+			NTHeader ntHeader = new NTHeader(reader, ntHeaderOffset,
 					PortableExecutable.SectionLayout.FILE, false, false);
 			println("Loaded Portable Executable");
 
