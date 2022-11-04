@@ -84,7 +84,7 @@ public class CBFSFile {
 		type = reader.readNextInt();
 		attributesOffset = reader.readNextUnsignedInt();
 		offset = reader.readNextUnsignedInt();
-		name = reader.readNextNullTerminatedAsciiString();
+		name = reader.readNextAsciiString();
 
 		// The attributes offset should point past the end of the CBFS file structure.
 		if (attributesOffset != 0 && attributesOffset > CBFSConstants.CBFS_FILE_SIZE) {

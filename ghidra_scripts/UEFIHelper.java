@@ -18,14 +18,12 @@
 import firmware.common.UUIDUtils;
 import firmware.uefi_te.TELoader;
 import firmware.uefi_te.TerseExecutableHeader;
-import generic.continues.RethrowContinuesFactory;
 import ghidra.app.decompiler.*;
 import ghidra.app.plugin.core.datamgr.archive.DuplicateIdException;
 import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
 import ghidra.app.script.GhidraScript;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
-import ghidra.app.util.bin.format.FactoryBundledWithBinaryReader;
 import ghidra.app.util.bin.format.pe.MachineConstants;
 import ghidra.app.util.bin.format.pe.NTHeader;
 import ghidra.app.util.bin.format.pe.PeSubsystem;
@@ -414,10 +412,9 @@ public class UEFIHelper extends GhidraScript {
 			MemoryBlock peBlock = currentProgram.getMemory().getBlock(PeLoader.HEADERS);
 			byte[] blockBytes = new byte[(int) peBlock.getSize()];
 			peBlock.getBytes(peBlock.getStart(), blockBytes);
-			FactoryBundledWithBinaryReader reader = new FactoryBundledWithBinaryReader(
-					RethrowContinuesFactory.INSTANCE, new ByteArrayProvider(blockBytes), true);
+			BinaryReader reader = new BinaryReader(new ByteArrayProvider(blockBytes), true);
 			int ntHeaderOffset = reader.readInt(0x3C);
-			NTHeader ntHeader = NTHeader.createNTHeader(reader, ntHeaderOffset,
+			NTHeader ntHeader = new NTHeader(reader, ntHeaderOffset,
 					PortableExecutable.SectionLayout.FILE, false, false);
 			println("Loaded Portable Executable");
 

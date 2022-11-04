@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  GHIDRA_VERSION: 10.1.5
-  GHIDRA_DATE: 20220726
+  GHIDRA_VERSION: 10.2
+  GHIDRA_DATE: 20221101
 
 jobs:
   build-macos:
@@ -15,10 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Ghidra
@@ -42,10 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Ghidra
@@ -72,10 +72,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Ghidra
@@ -107,8 +107,10 @@ jobs:
           else
               plugin_tag="$plugin_date.0"
           fi
+          plugin_changelog="$(git log --pretty=format:%s ${last_tag}..)"
+          plugin_changelog="${plugin_changelog//$'\n'/'%0A'}"
           echo "PLUGIN_TAG=${plugin_tag}" >> $GITHUB_ENV
-          echo "PLUGIN_CHANGELOG=$(git log --pretty=format:%s ${last_tag}..)" >> $GITHUB_ENV
+          echo "PLUGIN_CHANGELOG=${plugin_changelog}" >> $GITHUB_ENV
           mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
