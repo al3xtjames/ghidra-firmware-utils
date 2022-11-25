@@ -104,16 +104,21 @@ jobs:
           set -x
           ./gradlew
           plugin_date=$(find dist -name '*.zip' | awk -F '_' '{print $4}')
-          last_tag=$(git tag -l "$plugin_date.*" | tail -n 1)
+          last_tag=$(git tag -l "$plugin_date.*" | sort -n | tail -n 1)
           if [ ! -z "$last_tag" ]; then
               plugin_tag=$(echo "$last_tag" | awk -F '.' '{print $1 "." $2+1}')
           else
               plugin_tag="$plugin_date.0"
+              last_tag=$(git tag -l | sort -n | tail -n 1)
+              if [ -z "$last_tag" ]; then
+                last_tag=$(git rev-list --max-parents=0 HEAD)
+              fi
           fi
-          plugin_changelog="$(git log --pretty=format:%s ${last_tag}..)"
-          plugin_changelog="${plugin_changelog//$'\n'/'%0A'}"
+          plugin_changelog="$(git log --pretty=format:%s ${last_tag}.. | sed -e 's/^/- /')"
           echo "PLUGIN_TAG=${plugin_tag}" >> $GITHUB_ENV
-          echo "PLUGIN_CHANGELOG=${plugin_changelog}" >> $GITHUB_ENV
+          echo "PLUGIN_CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$plugin_changelog" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
           mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
 
       - name: Upload to Artifacts
