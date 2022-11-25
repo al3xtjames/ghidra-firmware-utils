@@ -23,6 +23,7 @@ jobs:
 
       - name: Set up Ghidra
         run: |
+          set -x
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
@@ -80,6 +81,7 @@ jobs:
 
       - name: Set up Ghidra
         run: |
+          set -x
           curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
           echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
@@ -99,6 +101,7 @@ jobs:
 
       - name: Build plugin with Gradle
         run: |
+          set -x
           ./gradlew
           plugin_date=$(find dist -name '*.zip' | awk -F '_' '{print $4}')
           last_tag=$(git tag -l "$plugin_date.*" | tail -n 1)
