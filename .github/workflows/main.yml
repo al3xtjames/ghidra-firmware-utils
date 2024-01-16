@@ -2,136 +2,126 @@ name: Java CI
 
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
+  release:
+    types: [published]
 
-env:
-  GHIDRA_VERSION: 10.4
-  GHIDRA_DATE: 20230928
+permissions:
+  contents: write
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
+  build-natives:
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - windows-latest
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v3
+    - name: Clone Repository
+      uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'adopt'
+    - name: Install Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Set up Ghidra
-        run: |
-          set -x
-          curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
-        working-directory: /tmp
+    - name: Install Ghidra
+      uses: antoniovazquezblanco/setup-ghidra@v1.2.0
+      with:
+        auth_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build with Gradle
-        run: ./gradlew
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2.11.1
 
-      - name: Upload to Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: libefidecompress.dylib
-          path: os/mac_x86_64/libefidecompress.dylib
+    - name: Build natives
+      run: ./gradlew efidecompressSharedLibrary copyLibraries -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
+    - name: Upload natives
+      uses: actions/upload-artifact@v4
+      with:
+        name: libefidecompress_${{ matrix.os }}
+        path: |
+          os/*/*
+          !os/*/README.txt
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'adopt'
+  build-extension:
+    strategy:
+      matrix:
+        ghidra:
+          - "11.0"
+          - "10.4"
+          - "10.3.3"
+          - "10.3.2"
+          - "10.3.1"
+          - "10.3"
+          - "10.2.3"
+          - "10.2.2"
+          - "10.2.1"
+          - "10.2"
 
-      - name: Set up Ghidra
-        run: |
-          Invoke-WebRequest "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${env:GHIDRA_VERSION}_build/ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -OutFile "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip"
-          Expand-Archive "ghidra_${env:GHIDRA_VERSION}_PUBLIC_${env:GHIDRA_DATE}.zip" -DestinationPath .
-          echo "GHIDRA_INSTALL_DIR=$pwd\ghidra_${env:GHIDRA_VERSION}_PUBLIC" >> ${env:GITHUB_ENV}
-        working-directory: ${{ env.TEMP }}
-
-      - name: Build with Gradle
-        run: ./gradlew.bat
-
-      - name: Upload to Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: efidecompress.dll
-          path: os/win_x86_64/efidecompress.dll
-
-  build-linux:
-    needs: [build-macos, build-windows]
+    needs: build-natives
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+    - name: Clone Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'adopt'
+    - name: Install Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Set up Ghidra
-        run: |
-          set -x
-          curl -L -O "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          unzip -q "ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
-          echo "GHIDRA_INSTALL_DIR=${PWD}/ghidra_${GHIDRA_VERSION}_PUBLIC" >> $GITHUB_ENV
-        working-directory: /tmp
+    - name: Install Ghidra
+      uses: antoniovazquezblanco/setup-ghidra@v1.2.0
+      with:
+        auth_token: ${{ secrets.GITHUB_TOKEN }}
+        version: ${{ matrix.ghidra }}
 
-      - name: Download macOS JNI library
-        uses: actions/download-artifact@v3
-        with:
-          name: libefidecompress.dylib
-          path: os/mac_x86_64
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2.11.1
 
-      - name: Download Windows JNI library
-        uses: actions/download-artifact@v3
-        with:
-          name: efidecompress.dll
-          path: os/win_x86_64
+    - name: Download precompiled natives
+      uses: actions/download-artifact@v4
+      with:
+        path: os/
+        merge-multiple: true
+ 
+    - name: Build the plugin
+      run: ./gradlew -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
 
-      - name: Build plugin with Gradle
-        run: |
-          set -x
-          ./gradlew
-          plugin_date=$(find dist -name '*.zip' | awk -F '_' '{print $4}')
-          last_tag=$(git tag -l "$plugin_date.*" | sort -n | tail -n 1)
-          if [ ! -z "$last_tag" ]; then
-              plugin_tag=$(echo "$last_tag" | awk -F '.' '{print $1 "." $2+1}')
-          else
-              plugin_tag="$plugin_date.0"
-              last_tag=$(git tag -l | sort -n | tail -n 1)
-              if [ -z "$last_tag" ]; then
-                last_tag=$(git rev-list --max-parents=0 HEAD)
-              fi
-          fi
-          plugin_changelog="$(git log --pretty=format:%s ${last_tag}.. | sed -e 's/^/- /')"
-          echo "PLUGIN_TAG=${plugin_tag}" >> $GITHUB_ENV
-          echo "PLUGIN_CHANGELOG<<EOF" >> $GITHUB_ENV
-          echo "$plugin_changelog" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          mv dist/*.zip "dist/ghidra_${GHIDRA_VERSION}_PUBLIC_${plugin_tag}_ghidra-firmware-utils.zip"
+    - name: Upload to Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware_utils_ghidra_${{ matrix.ghidra }}
+        path: dist/*.zip
 
-      - name: Upload to Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          path: dist/*.zip
+  release:
+    runs-on: "ubuntu-latest"
+    needs: build-extension
+    if: github.event_name == 'release'
 
-      - name: Upload to Releases
-        if: ${{ github.ref == 'refs/heads/master' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*.zip
-          tag: ${{ env.PLUGIN_TAG }}
-          file_glob: true
-          body: ${{ env.PLUGIN_CHANGELOG }}
+    steps:
+    - name: Download binaries
+      uses: actions/download-artifact@v4
+      with:
+        pattern: firmware_utils_ghidra_*
+        path: dist/
+        merge-multiple: true
+
+    - name: Upload to Releases
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: dist/*.zip
+        tag: ${{ github.ref }}
+        file_glob: true
