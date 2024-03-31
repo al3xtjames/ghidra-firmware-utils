@@ -33,7 +33,7 @@ jobs:
         java-version: '17'
 
     - name: Install Ghidra
-      uses: antoniovazquezblanco/setup-ghidra@v1.2.0
+      uses: antoniovazquezblanco/setup-ghidra@4ecf6e0dc501f8efc1d74d93645c6d5c1df7f441 # v1.2.1
       with:
         auth_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -71,7 +71,7 @@ jobs:
 
     steps:
     - name: Clone Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         fetch-depth: 0
 
@@ -82,13 +82,13 @@ jobs:
         java-version: '17'
 
     - name: Install Ghidra
-      uses: antoniovazquezblanco/setup-ghidra@v1.2.0
+      uses: antoniovazquezblanco/setup-ghidra@4ecf6e0dc501f8efc1d74d93645c6d5c1df7f441 # v1.2.1
       with:
         auth_token: ${{ secrets.GITHUB_TOKEN }}
         version: ${{ matrix.ghidra }}
 
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.11.1
+      uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
 
     - name: Download precompiled natives
       uses: actions/download-artifact@v4
@@ -112,14 +112,14 @@ jobs:
 
     steps:
     - name: Download binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
       with:
         pattern: firmware_utils_ghidra_*
         path: dist/
         merge-multiple: true
 
     - name: Upload to Releases
-      uses: svenstaro/upload-release-action@v2
+      uses: svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd # 2.9.0
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: dist/*.zip
