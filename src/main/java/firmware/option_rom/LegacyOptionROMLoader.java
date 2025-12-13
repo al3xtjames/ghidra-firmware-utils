@@ -21,6 +21,7 @@ import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
+import ghidra.app.util.opinion.Loader.ImporterSettings;
 import ghidra.app.util.opinion.LoadSpec;
 import ghidra.program.flatapi.FlatProgramAPI;
 import ghidra.program.model.address.Address;
@@ -52,14 +53,13 @@ public class LegacyOptionROMLoader extends AbstractLibrarySupportLoader {
 	}
 
 	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-			Program program, TaskMonitor monitor, MessageLog log) throws IOException {
-		BinaryReader reader = new BinaryReader(provider, true);
+	protected void load(Program program, ImporterSettings settings) throws IOException {
+		BinaryReader reader = new BinaryReader(settings.provider(), true);
 		LegacyOptionROMHeader header = new LegacyOptionROMHeader(reader);
 
 		// Create a segment for the entire option ROM.
-		FlatProgramAPI api = new FlatProgramAPI(program, monitor);
-		InputStream romStream = provider.getInputStream(0);
+		FlatProgramAPI api = new FlatProgramAPI(program, settings.monitor());
+		InputStream romStream = settings.provider().getInputStream(0);
 		try {
 			api.createMemoryBlock("Option ROM", api.toAddr(0), romStream, romStream.available(),
 					false);
