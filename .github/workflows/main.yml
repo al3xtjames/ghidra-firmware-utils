@@ -30,7 +30,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '21'
 
     - name: Install Ghidra
       uses: antoniovazquezblanco/setup-ghidra@4ecf6e0dc501f8efc1d74d93645c6d5c1df7f441 # v1.2.1
@@ -55,19 +55,7 @@ jobs:
     strategy:
       matrix:
         ghidra:
-          - "11.0.3"
-          - "11.0.2"
-          - "11.0.1"
-          - "11.0"
-          - "10.4"
-          - "10.3.3"
-          - "10.3.2"
-          - "10.3.1"
-          - "10.3"
-          - "10.2.3"
-          - "10.2.2"
-          - "10.2.1"
-          - "10.2"
+          - "12.0"
 
     needs: build-natives
     runs-on: ubuntu-latest
@@ -82,7 +70,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '21'
 
     - name: Install Ghidra
       uses: antoniovazquezblanco/setup-ghidra@4ecf6e0dc501f8efc1d74d93645c6d5c1df7f441 # v1.2.1

@@ -78,14 +78,12 @@ public class TELoader extends AbstractLibrarySupportLoader {
 	}
 
 	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-						Program program, TaskMonitor monitor,
-						MessageLog log) throws IOException {
-		BinaryReader reader = new BinaryReader(provider, true);
+	protected void load(Program program, ImporterSettings settings) throws IOException {
+		BinaryReader reader = new BinaryReader(settings.provider(), true);
 		TerseExecutableHeader teHeader = new TerseExecutableHeader(reader);
 		EFIImageSectionHeader[] sectionHeaders = teHeader.getSections();
-		FlatProgramAPI api = new FlatProgramAPI(program, monitor);
-		InputStream inputStream = provider.getInputStream(0);
+		FlatProgramAPI api = new FlatProgramAPI(program, settings.monitor());
+		InputStream inputStream = settings.provider().getInputStream(0);
 
 		try {
 			// Create a segment for the TE header and section headers.
@@ -112,7 +110,7 @@ public class TELoader extends AbstractLibrarySupportLoader {
 					continue;
 				}
 
-				inputStream = provider.getInputStream(sectionHeader.getVirtualAddress() -
+				inputStream = settings.provider().getInputStream(sectionHeader.getVirtualAddress() -
 						teHeader.getHeaderOffset());
 				long startAddress = teHeader.getImageBase() + sectionHeader.getVirtualAddress();
 				try {
