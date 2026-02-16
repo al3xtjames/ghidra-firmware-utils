@@ -47,6 +47,8 @@ $ ./gradlew
 echo GHIDRA_INSTALL_DIR=/path/to/ghidra > gradle.properties
 ```
 
+> Note: if you are using the flatpak version of ghidra, the path to ghidra is available at `/var/lib/flatpak/app/org.ghidra_sre.Ghidra/current/active/files/lib/`
+
 The module ZIP will be output to `dist/`. Use **File > Install Extensions** and
 select the green plus to browse to the extension. Restart Ghidra when prompted.
 
