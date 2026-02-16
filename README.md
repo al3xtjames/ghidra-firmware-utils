@@ -47,7 +47,11 @@ $ ./gradlew
 echo GHIDRA_INSTALL_DIR=/path/to/ghidra > gradle.properties
 ```
 
-> Note: if you are using the flatpak version of ghidra, the path to ghidra is available at `/var/lib/flatpak/app/org.ghidra_sre.Ghidra/current/active/files/lib/`
+> [!NOTE]
+> `GHIDRA_INSTALL_DIR` should point to the directory which contains
+> `support/buildExtension.gradle`. For example, users of the
+> [Flathub package][3] should use
+> `/var/lib/flatpak/app/org.ghidra_sre.Ghidra/current/active/files/lib/ghidra`.
 
 The module ZIP will be output to `dist/`. Use **File > Install Extensions** and
 select the green plus to browse to the extension. Restart Ghidra when prompted.
@@ -98,9 +102,9 @@ in `data` and rebuild the plugin.
 
 ### Related projects
 These are some interesting projects related to UEFI reversing:
- - [efiXplorer][3] - IDA plugin for UEFI firmware analysis and reverse
+ - [efiXplorer][4] - IDA plugin for UEFI firmware analysis and reverse
    engineering automation
- - [Ghidra-EFI-Byte-Code-Processor][4] - EFI Byte Code (EBC) processor module
+ - [Ghidra-EFI-Byte-Code-Processor][5] - EFI Byte Code (EBC) processor module
    for Ghidra
 
 ## License
@@ -109,10 +113,8 @@ Apache 2.0, with some exceptions:
 
 ## Credits
 `src/efidecompress/c/efidecompress.c` is a lightly modified version of
-[Decompress.c][5] from uefi-firmware-parser (which itself is derived from
-[the original in EDK2 BaseTools][6]).
-
-`lib/xz-1.8.jar` is taken from the [XZ for Java][7] project.
+[Decompress.c][6] from uefi-firmware-parser (which itself is derived from
+[the original in EDK2 BaseTools][7]).
 
 The IFD FS loader in `src/main/java/firmware/ifd` used the parser from
 [UEFITool][8] as a reference.
@@ -129,11 +131,11 @@ UEFI helper script.
 
 [1]: https://ghidra-sre.org/
 [2]: https://summerofcode.withgoogle.com/projects/#6413737605464064
-[3]: https://github.com/binarly-io/efiXplorer
-[4]: https://github.com/meromwolff/Ghidra-EFI-Byte-Code-Processor
-[5]: https://github.com/theopolis/uefi-firmware-parser/blob/21106baf019db9dcd046a3c01ee7b32212de45a5/uefi_firmware/compression/Tiano/Decompress.c
-[6]: https://github.com/tianocore/edk2/blob/2e351cbe8e190271b3716284fc1076551d005472/BaseTools/Source/C/Common/Decompress.c
-[7]: https://tukaani.org/xz/java.html
+[3]: https://flathub.org/en/apps/org.ghidra_sre.Ghidra
+[4]: https://github.com/binarly-io/efiXplorer
+[5]: https://github.com/meromwolff/Ghidra-EFI-Byte-Code-Processor
+[6]: https://github.com/theopolis/uefi-firmware-parser/blob/21106baf019db9dcd046a3c01ee7b32212de45a5/uefi_firmware/compression/Tiano/Decompress.c
+[7]: https://github.com/tianocore/edk2/blob/2e351cbe8e190271b3716284fc1076551d005472/BaseTools/Source/C/Common/Decompress.c
 [8]: https://github.com/LongSoft/UEFITool
 [9]: https://github.com/LongSoft/UEFITool/blob/f863caac9df1c5258e9bcc0441a695b6a3bbaf7c/common/guids.csv
 [10]: https://github.com/NationalSecurityAgency/ghidra/pull/501#issuecomment-498374810
