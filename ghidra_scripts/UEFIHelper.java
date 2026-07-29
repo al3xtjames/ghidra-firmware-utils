@@ -104,9 +104,9 @@ public class UEFIHelper extends GhidraScript {
 				currentProgram);
 
 		// Update the function with the generated parameter list and return type.
-		function.setName(definition.getName(), SourceType.DEFAULT);
+		function.setName(definition.getName(), SourceType.ANALYSIS);
 		function.updateFunction(null, returnType, parameters,
-				FunctionUpdateType.DYNAMIC_STORAGE_FORMAL_PARAMS, false, SourceType.DEFAULT);
+				FunctionUpdateType.DYNAMIC_STORAGE_FORMAL_PARAMS, false, SourceType.ANALYSIS);
 	}
 
 	/**
@@ -298,7 +298,7 @@ public class UEFIHelper extends GhidraScript {
 					if (parameters.size() == originalParameters.length) {
 						function.updateFunction(null, null, parameters,
 								FunctionUpdateType.DYNAMIC_STORAGE_FORMAL_PARAMS, false,
-								SourceType.DEFAULT);
+								SourceType.ANALYSIS);
 						println("Updated " + function.getName() + " function signature");
 					} else {
 						Msg.error(this, "Failed to parse " + function.getName() + " parameters");
