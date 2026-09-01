@@ -179,10 +179,14 @@ public class UEFIHelper extends GhidraScript {
 							}
 						} else {
 							ClangFieldToken sourceToken = (ClangFieldToken) sourceNode;
-							if (sourceToken instanceof Structure) {
-								Structure structureType = (Structure) sourceToken.getDataType();
-								sourceDataType = structureType.getDataTypeAt(
-										sourceToken.getOffset()).getDataType();
+							DataType parentType = sourceToken.getDataType();
+							if (parentType instanceof Structure) {
+								Structure structureType = (Structure) parentType;
+								DataTypeComponent component =
+										structureType.getComponentAt(sourceToken.getOffset());
+								if (component != null) {
+									sourceDataType = component.getDataType();
+								}
 							}
 						}
 
