@@ -110,7 +110,7 @@ public class TELoader extends AbstractLibrarySupportLoader {
 					continue;
 				}
 
-				inputStream = settings.provider().getInputStream(sectionHeader.getVirtualAddress() -
+				inputStream = settings.provider().getInputStream(sectionHeader.getRawDataPointer() -
 						teHeader.getHeaderOffset());
 				long startAddress = teHeader.getImageBase() + sectionHeader.getVirtualAddress();
 				try {
