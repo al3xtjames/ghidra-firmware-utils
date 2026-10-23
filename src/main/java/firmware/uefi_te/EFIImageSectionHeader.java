@@ -105,6 +105,15 @@ public class EFIImageSectionHeader implements StructConverter {
 	}
 
 	/**
+	 * Returns the raw data pointer for the current section.
+	 *
+	 * @return the raw data pointer for the current section
+	 */
+	public int getRawDataPointer() {
+		return rawDataPointer;
+	}
+
+	/**
 	 * Returns whether the current section is executable.
 	 *
 	 * @return whether the current section is executable
