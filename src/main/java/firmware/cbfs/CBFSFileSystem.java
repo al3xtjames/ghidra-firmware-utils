@@ -54,7 +54,7 @@ public class CBFSFileSystem implements GFileSystem {
 		monitor.setMessage("Mounting CBFS");
 		// Read each CBFS file.
 		while (reader.length() - reader.getPointerIndex() > 0) {
-			monitor.checkCanceled();
+			monitor.checkCancelled();
 			monitor.setProgress(reader.getPointerIndex());
 
 			CBFSFile cbfsFile = new CBFSFile(reader);
