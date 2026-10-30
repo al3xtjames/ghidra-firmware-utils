@@ -94,6 +94,8 @@ UEFIFFSConstants {
 
 	// Size of the common UEFI FFS section header structure
 	public static final int FFS_SECTION_HEADER_SIZE = 4;
+	public static final int FFS_SECTION_SIZE_LENGTH = 3;
+	public static final int FFS_SECTION2_IS_USED = 0xFFFFFF;
 
 	// UEFI FFS section types
 	public static final class SectionType {
@@ -187,4 +189,10 @@ UEFIFFSConstants {
 	// CRC-32 GUID (for GUID-defined sections)
 	public static final UUID CRC32_GUID =
 			UUID.fromString("FC1BCDB0-7D31-49AA-936A-A4600D9DD083");
+
+	// AMD Zlib compression GUIDs (for GUID-defined sections)
+	public static final UUID AMD_ZLIB_COMPRESS_GUID =
+			UUID.fromString("CE3233F5-2CD6-4D87-9152-4A238BB6D1C4");
+	public static final UUID AMD_ZLIB2_COMPRESS_GUID =
+			UUID.fromString("991EFAC0-E260-416B-A4B8-3B153072B804");
 }

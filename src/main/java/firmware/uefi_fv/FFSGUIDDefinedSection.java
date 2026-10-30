@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.Formatter;
 import java.util.UUID;
 import java.util.zip.CRC32;
+import java.util.zip.InflaterInputStream;
 
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.formats.gfilesystem.fileinfo.FileAttributes;
@@ -57,10 +58,14 @@ import ghidra.util.Msg;
  * TODO: It would probably be better if this was refactored as FFSGUIDDefinedSectionFactory.
  */
 public class FFSGUIDDefinedSection extends FFSSection {
+	private static final int GUID_DEFINED_HEADER_SIZE = 20;
+	private static final int AMD_ZLIB_HEADER_SIZE = 0x100;
+	private static final int AMD_ZLIB_COMPRESSED_SIZE_OFFSET = 0x14;
+
 	// Original header fields
 	private final UUID sectionDefinitionGuid;
-	private final short dataOffset;
-	private final short attributes;
+	private final int dataOffset;
+	private final int attributes;
 
 	/**
 	 * Constructs a FFSGUIDDefinedSection from a specified BinaryReader and adds it to a specified
@@ -74,10 +79,24 @@ public class FFSGUIDDefinedSection extends FFSSection {
 			throws IOException {
 		super(reader);
 
-		long baseIndex = reader.getPointerIndex() - UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+		long baseIndex = reader.getPointerIndex() - super.getHeaderLength();
 		sectionDefinitionGuid = UUIDUtils.fromBinaryReader(reader);
-		dataOffset = reader.readNextShort();
-		attributes = reader.readNextShort();
+		dataOffset = reader.readNextUnsignedShort();
+		attributes = reader.readNextUnsignedShort();
+
+		long totalLength = super.getHeaderLength() + super.length();
+		int minimumDataOffset = super.getHeaderLength() + GUID_DEFINED_HEADER_SIZE;
+		if (dataOffset < minimumDataOffset || dataOffset > totalLength) {
+			throw new IOException(String.format(
+					"Invalid GUID-defined data offset: %d, expected %d..%d",
+					dataOffset, minimumDataOffset, totalLength));
+		}
+		if (sectionDefinitionGuid.equals(UEFIFFSConstants.CRC32_GUID) &&
+				dataOffset < minimumDataOffset + Integer.BYTES) {
+			throw new IOException(String.format(
+					"Invalid CRC32 GUID-defined data offset: %d, expected at least %d",
+					dataOffset, minimumDataOffset + Integer.BYTES));
+		}
 
 		// Add this file to the FS.
 		GFile fileImpl = fsih.storeFileWithParent(getName(), parent, -1, true, -1, this);
@@ -121,6 +140,42 @@ public class FFSGUIDDefinedSection extends FFSSection {
 				reader.setPointerIndex(baseIndex + getTotalLength());
 				return;
 			}
+		} else if (sectionDefinitionGuid.equals(UEFIFFSConstants.AMD_ZLIB_COMPRESS_GUID) ||
+				sectionDefinitionGuid.equals(UEFIFFSConstants.AMD_ZLIB2_COMPRESS_GUID)) {
+			// AMD Zlib GUID-defined sections contain a 0x100-byte vendor header followed by
+			// the compressed payload. The compressed size is stored at offset 0x14.
+			if (length() < AMD_ZLIB_HEADER_SIZE) {
+				Msg.error(this, "AMD Zlib section is smaller than its 0x100-byte header");
+				reader.setPointerIndex(baseIndex + getTotalLength());
+				return;
+			}
+
+			long dataIndex = reader.getPointerIndex();
+			reader.setPointerIndex(dataIndex + AMD_ZLIB_COMPRESSED_SIZE_OFFSET);
+			long compressedSize = reader.readNextUnsignedInt();
+			long availableCompressedSize = length() - AMD_ZLIB_HEADER_SIZE;
+			if (compressedSize != availableCompressedSize) {
+				Msg.error(this, String.format(
+						"Invalid AMD Zlib compressed size: header says %d, payload contains %d",
+						compressedSize, availableCompressedSize));
+				reader.setPointerIndex(baseIndex + getTotalLength());
+				return;
+			}
+
+			BoundedInputStream boundedStream = new BoundedInputStream(
+					reader.getByteProvider().getInputStream(dataIndex + AMD_ZLIB_HEADER_SIZE),
+					compressedSize);
+			try (InflaterInputStream inputStream = new InflaterInputStream(boundedStream)) {
+				uncompressedData = inputStream.readAllBytes();
+
+				BinaryReader sectionReader = new BinaryReader(
+						new ByteArrayProvider(uncompressedData), true);
+				parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
+			} catch (IOException e) {
+				Msg.error(this, "Failed to extract AMD Zlib compressed section: " + e.getMessage());
+				reader.setPointerIndex(baseIndex + getTotalLength());
+				return;
+			}
 		} else if (sectionDefinitionGuid.equals(UEFIFFSConstants.CRC32_GUID)) {
 			// Read the expected CRC-32 checksum, which is located directly after the attributes
 			// field in the section header.
@@ -142,8 +197,13 @@ public class FFSGUIDDefinedSection extends FFSSection {
 			BinaryReader sectionReader = new BinaryReader(
 					new ByteArrayProvider(uncompressedData), true);
 			parseNestedSections(sectionReader, uncompressedData.length, fsih, fileImpl);
+		} else if ((attributes &
+				UEFIFFSConstants.DefinedSectionAttributes.PROCESSING_REQUIRED) != 0) {
+			// The payload cannot be interpreted without a handler for this GUID. Keep it opaque
+			// instead of treating compressed/encrypted bytes as nested FFS sections.
+			new FFSRawFile(reader, (int) length(), fsih, fileImpl);
 		} else {
-			// Parse the data in the current GUID-defined section.
+			// No additional processing is required, so parse the payload as nested sections.
 			parseNestedSections(reader, length(), fsih, fileImpl);
 		}
 
@@ -165,17 +225,64 @@ public class FFSGUIDDefinedSection extends FFSSection {
 		long maxIndex = baseIndex + length;
 		long currentIndex = baseIndex;
 		while (currentIndex < maxIndex) {
-			// Try to parse each FFS section.
+			long remaining = maxIndex - currentIndex;
 			try {
+				long sectionLength = getNestedSectionLength(reader, currentIndex, remaining);
+				long sectionEnd = currentIndex + sectionLength;
+
 				FFSSectionFactory.parseSection(reader, fsih, parent);
+				if (reader.getPointerIndex() > sectionEnd) {
+					throw new IOException(String.format(
+							"Nested section parser consumed %d bytes, declared size is %d",
+							reader.getPointerIndex() - currentIndex, sectionLength));
+				}
+
+				// The section header is authoritative for where the next aligned section starts.
+				reader.setPointerIndex(sectionEnd);
 			} catch (IOException e) {
 				reader.setPointerIndex(currentIndex);
-				new FFSRawFile(reader, (int) (maxIndex - currentIndex), fsih, parent);
+				new FFSRawFile(reader, (int) remaining, fsih, parent);
+				return;
 			}
 
-			reader.align(4);
-			currentIndex = reader.getPointerIndex();
+			long alignedIndex = (reader.getPointerIndex() + 3) & ~3L;
+			currentIndex = Math.min(alignedIndex, maxIndex);
+			reader.setPointerIndex(currentIndex);
 		}
+	}
+
+	/**
+	 * Reads and validates the declared total length of a nested FFS section without advancing the
+	 * reader. This prevents a malformed child section from escaping the bounds of its parent.
+	 */
+	private static long getNestedSectionLength(BinaryReader reader, long index, long remaining)
+			throws IOException {
+		if (remaining < UEFIFFSConstants.FFS_SECTION_HEADER_SIZE) {
+			throw new IOException("Nested section is smaller than the common section header");
+		}
+
+		byte[] sizeBytes =
+			reader.getByteProvider().readBytes(index, UEFIFFSConstants.FFS_SECTION_SIZE_LENGTH);
+		long sectionLength =
+			(sizeBytes[0] & 0xffL) | ((sizeBytes[1] & 0xffL) << 8) | ((sizeBytes[2] & 0xffL) << 16);
+		long headerLength = UEFIFFSConstants.FFS_SECTION_HEADER_SIZE;
+
+		if (sectionLength == UEFIFFSConstants.FFS_SECTION2_IS_USED) {
+			headerLength += Integer.BYTES;
+			if (remaining < headerLength) {
+				throw new IOException("Nested extended section is smaller than its header");
+			}
+			sectionLength = Integer.toUnsignedLong(
+				reader.readInt(index + UEFIFFSConstants.FFS_SECTION_HEADER_SIZE));
+		}
+
+		if (sectionLength < headerLength || sectionLength > remaining) {
+			throw new IOException(String.format(
+					"Invalid nested section size: %d, expected %d..%d",
+					sectionLength, headerLength, remaining));
+		}
+
+		return sectionLength;
 	}
 
 	/**
